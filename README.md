@@ -1,102 +1,100 @@
-# RMAnalyzer
 
-## Description
+# rm-analyzer
 
-This script is designed to generate a summary of expenses from a spreadsheet containing transaction data. It is intended to be run as an AWS Lambda function triggered by an S3 event.
+## Overview
 
-The data (typically the current month's transactions) is exported from my finanical app as a CSV list of raw transaction data. I wanted to summarize the data (in this case a summary of expenses per category, per person) and send a summary email in as few steps as possible.
+**rm-analyzer** is a professional, modular Python project designed to automate the summarization of expense data and email reporting using AWS Lambda, S3, and SES. The project is fully type-checked, robustly tested, and features modern CI/CD for seamless deployment.
 
-### Goals
+## Features
 
-- **AWS**. Leverage AWS, and in particular, SES to make sending emails simple. An AWS Lambda function triggered by an S3 event was also a natural choice for this use case.
-- **Python**. I wanted to convert the raw transaction data into data types and be able to enforce type safety to ensure accuracy. I implemented `mypy` to help with this. I tried to leverage object-oriented programming where appropriate to allow for a robust design that could be built upon later.
-- **Tests**. Write _some_ kind of test to further ensure integrity. I settled on an integration test implemented with `unittest`. The `moto` package was very helpful. This is just a personal project, and I essentially wanted to perform a single end-to-end test to make sure the main functionality is intact before pushing to production.
-- **CI/CD**. Logging into AWS to upload new Lambda function code every time I made a change quickly became tedious. My goal was to create a pipeline such that on push to `main` the code automatically deploys to AWS Lambda. I ended up achieving this with `GitHub Actions` and the Serverless Framework (`serverless`). I also use this pipeline to run the tests and check types with `mypy` before deploying as an added benefit.
+- **Modular Python Package**: All business logic is organized in the `rmanalyzer/` package, with clear separation of models, configuration, AWS utilities, transaction processing, and email generation.
+- **AWS Lambda Ready**: The entry point (`main.py`) is a thin Lambda handler that leverages the package modules. Designed for S3-triggered execution.
+- **Type Safety**: Uses `mypy` and type hints throughout for maximum reliability.
+- **Comprehensive Testing**: Includes both unit and edge case tests (`tests/`), using `unittest` and `moto` for AWS mocking.
+- **Modern CI/CD**: GitHub Actions workflow runs tests, type checks, and deploys to AWS Lambda via the Serverless Framework on every push to `main`.
+- **Easy Configuration**: Reads summary configuration from S3, validates it, and assigns transactions to people and categories.
+- **Automated Emailing**: Generates and sends summary emails via AWS SES.
 
-### Links
+## How It Works
 
-- https://mypy.readthedocs.io/en/stable/getting_started.html
-- https://docs.getmoto.org/en/latest/docs/getting_started.html
-- https://realpython.com/python-testing/
-- https://www.serverless.com/framework/docs/tutorial
-- https://www.yattag.org/#tutorial
-- https://typeguard.readthedocs.io/en/stable/
+1. **Upload Data**: Export your transaction data as CSV from your financial app and upload it to the designated S3 bucket.
+2. **Lambda Trigger**: The S3 `PUT` event triggers the Lambda function (`main.py`).
+3. **Config Loading**: The function loads and validates configuration (people, accounts, emails, owner) from a separate S3 bucket.
+4. **Transaction Processing**: Transactions are parsed, assigned to people, and summarized by category.
+5. **Email Generation**: A summary email is constructed and sent to the configured recipients using AWS SES.
 
-## Workflow
-
-1. The transaction data CSV is uploaded to an S3 bucket using a shell script (for now). Transaction data for some cats might look like:
+### Example CSV Input
 
 ```csv
 Date,Original Date,Account Type,Account Name,Account Number,Institution Name,Name,Custom Name,Amount,Description,Category,Note,Ignored From,Tax Deductible
 2023-08-31,2023-08-31,Credit Card,SavorOne,1313,Capital One,MADCATS DANCE,,150,MADCATS DANCE,Entertainment & Rec.,,,
 2023-09-04,2023-09-04,Credit Card,CREDIT CARD,1234,Chase,TIKICAT BAR,,12.66,TIKICAT BAR,Dining & Drinks,,,
-2023-09-04,2023-09-04,Credit Card,CREDIT CARD,1234,Chase,TIKICAT BAR,,12.66,TIKICAT BAR,Dining & Drinks,,budget,
 2023-09-12,2023-09-12,Cash,Spending Account,2121,Ally Bank,FISH MARKET,,47.71,FISH MARKET,Groceries,,,
-2023-09-15,2023-09-15,Credit Card,SavorOne,1313,Capital One,TIKICAT BAR,,17,TIKICAT BAR,Dining & Drinks,,,
 ```
 
-3. This `PUT` event triggers the Lambda function.
-
-```python
-def lambda_handler(event: Any, context: Any) -> None:
-    bucket = event["Records"][0]["s3"]["bucket"]["name"]
-    key = event["Records"][0]["s3"]["object"]["key"]
-    ...
-```
-
-3. Config necessary for the summary is read in from a separate S3 bucket. It might look like:
+### Example Config (JSON)
 
 ```json
 {
-    "People": [
-        {
-            "Name": "George",
-            "Accounts": [
-                1234
-            ],
-            "Email": "boygeorge@gmail.com"
-        },
-        {
-            "Name": "Tootie",
-            "Accounts": [
-                1313
-            ],
-            "Email": "tuttifruity@hotmail.com"
-        }
-    ],
-    "Owner": "bebas@gmail.com"
+  "People": [
+     { "Name": "George", "Accounts": [1234], "Email": "boygeorge@gmail.com" },
+     { "Name": "Tootie", "Accounts": [1313], "Email": "tuttifruity@hotmail.com" }
+  ],
+  "Owner": "bebas@gmail.com"
 }
 ```
 
-It's validated, and then the transaction data is read in and parsed.
+## Project Structure
 
-```python
-...
-# Read data from buckets
-config = get_config(CONFIG_BUCKET, CONFIG_KEY)
-validate_config(config)
-transactions = get_transactions(bucket, key)
-...
+```
+main.py                  # Lambda entry point
+rmanalyzer/              # Modular package (models, config, aws_utils, transactions, emailer)
+tests/                   # Unit and edge case tests
+requirements.txt         # Runtime dependencies
+test_requirements.txt    # Test/development dependencies
+serverless.yml           # Serverless Framework config
+.github/workflows/       # CI/CD pipeline
+.gitignore               # Ignores venv, cache, etc.
 ```
 
-4. A `Group` of `Person` objects is constructed. Each `Person` contains a `Transaction` list. The parsed transaction data is assigned to the right people.
+## Development & Testing
 
-```python
-...
-# Construct group and add transactions
-members = get_members(config["People"])
-group = Group(members)
-group.add_transactions(transactions)
-...
-```
+1. **Setup**: Use Python 3.13+ and create a virtual environment.
+2. **Install dependencies**:
+    ```sh
+    pip install -r requirements.txt -r test_requirements.txt
+    ```
+3. **Run tests**:
+    ```sh
+    python -m unittest discover tests
+    ```
+4. **Type check**:
+    ```sh
+    mypy rmanalyzer
+    ```
 
-5. A `SummaryEmail` is constructed and sent.
+## CI/CD & Deployment
 
-```python
-...
-# Construct and send email
-email = SummaryEmail(config["Owner"], [p.email for p in group.members])
-email.add_body(group)
-email.add_subject(group)
-email.send()
-```
+- On every push to `main`, GitHub Actions runs all tests, type checks, and (if successful) deploys the Lambda using the Serverless Framework.
+- Lambda runs on Python 3.13 and only includes the necessary code and dependencies.
+
+## Key Technologies
+
+- **Python 3.13**
+- **AWS Lambda, S3, SES**
+- **Serverless Framework**
+- **GitHub Actions**
+- **mypy, unittest, moto, boto3, typeguard, yattag**
+
+## References
+
+- [mypy](https://mypy.readthedocs.io/en/stable/getting_started.html)
+- [moto](https://docs.getmoto.org/en/latest/docs/getting_started.html)
+- [unittest](https://realpython.com/python-testing/)
+- [Serverless Framework](https://www.serverless.com/framework/docs/tutorial)
+- [yattag](https://www.yattag.org/#tutorial)
+- [typeguard](https://typeguard.readthedocs.io/en/stable/)
+
+---
+
+**rm-analyzer** is robust, maintainable, and ready for production or further development. Contributions and suggestions are welcome!

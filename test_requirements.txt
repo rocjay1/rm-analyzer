@@ -27,7 +27,7 @@ typeguard>=4.3.0
 types-awscrt>=0.20.11
 types-s3transfer>=0.10.1
 typing_extensions>=4.12.2
-urllib3>=2.2.1
+urllib3
 Werkzeug>=3.0.3
 xmltodict>=0.13.0
 yattag>=1.15.2

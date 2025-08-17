@@ -4,7 +4,7 @@ service: rmanalyzer
 
 provider:
   name: aws
-  runtime: python3.12
+  runtime: python3.13
   iam:
     role:
       managedPolicies:
@@ -15,8 +15,11 @@ provider:
   region: us-east-1
 
 package:
- patterns:
-   - main.py
+  patterns:
+    - main.py
+    - rmanalyzer/**
+    - '!**/__pycache__/**'
+    - '!**/*.pyc'
 
 plugins:
   - serverless-python-requirements

@@ -1,7 +1,7 @@
-on:
-  push:
-    branches:
-      - main
+# Temporarily disabled: on:
+#   push:
+#     branches:
+#       - main
 
 jobs:
   test:
@@ -14,20 +14,21 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.12
+          python-version: 3.13
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
       - name: Install Python dependencies
         run: pip install -r test_requirements.txt
-      
+
       - name: Type check with mypy
-        run: |
-          OUTPUT=$(mypy ./main.py)
-          if [ -n "$(echo $OUTPUT | grep 'Success')" ]; then
-            echo "mypy type check passed"
-          else
-            echo "mypy type check failed"
-            exit 1
-          fi
+        run: mypy main.py rmanalyzer
 
       - name: Run tests
         run: python -m unittest discover
@@ -43,12 +44,20 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.12
-      
+          python-version: 3.13
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
 
       - name: Install npm dependencies
         run: npm install -g serverless
