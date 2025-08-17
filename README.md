@@ -1,9 +1,13 @@
 
 # rm-analyzer
 
+> **Disclaimer:**
+>
+> This project is currently archived and not actively maintained or deployed. It is resurfaced here for reference and inspiration, as it demonstrates some interesting ideas in AWS automation, Python modularity, and CI/CD. Feel free to explore, adapt, or build upon it, but be aware that the infrastructure and deployment pipeline may require updates before use in production.
+
 ## Overview
 
-**rm-analyzer** is a professional, modular Python project designed to automate the summarization of expense data and email reporting using AWS Lambda, S3, and SES. The project is fully type-checked, robustly tested, and features modern CI/CD for seamless deployment.
+**rm-analyzer** is a Python project designed to automate the summarization of expense data and email reporting using AWS Lambda, S3, and SES. The project is fully type-checked, robustly tested, and features modern CI/CD for seamless deployment.
 
 ## Features
 
@@ -94,7 +98,3 @@ serverless.yml           # Serverless Framework config
 - [Serverless Framework](https://www.serverless.com/framework/docs/tutorial)
 - [yattag](https://www.yattag.org/#tutorial)
 - [typeguard](https://typeguard.readthedocs.io/en/stable/)
-
----
-
-**rm-analyzer** is robust, maintainable, and ready for production or further development. Contributions and suggestions are welcome!
