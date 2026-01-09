@@ -1,0 +1,8 @@
+{
+  "People": [
+     { "Name": "George", "Accounts": [1234], "Email": "boygeorge@gmail.com" },
+     { "Name": "Tootie", "Accounts": [1313], "Email": "tuttifruity@hotmail.com" }
+  ],
+  "Owner": "bebas@gmail.com",
+  "SenderEmail": "DoNotReply@example.com"
+}

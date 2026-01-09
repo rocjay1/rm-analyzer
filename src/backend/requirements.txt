@@ -1,0 +1,6 @@
+azure-functions
+azure-storage-blob
+azure-communication-email
+azure-identity
+typeguard>=4.2.1
+yattag>=1.15.2
