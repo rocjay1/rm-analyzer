@@ -1,87 +1,65 @@
-# RM Analyzer - Azure Migration (Entra ID Edition)
+# 🚀 RM-Analyzer Deployment Checklist
 
-This project has been migrated from AWS Serverless to Azure Native (Functions + Static Web Apps), utilizing **Entra ID** and **Managed Identities** for maximum security.
+## 1. Prerequisites
 
-## Security Highlights
-- **Frontend Auth**: Static Web App requires Azure AD login.
-- **Strict Access**: The App Registration is configured to **require user assignment**. Only users explicitly added to the application in Entra ID can log in.
-- **Backend Auth**: Function App uses System-Assigned Managed Identity.
-- **Keyless Access**: No access keys or connection strings are stored or used. Access is granted via RBAC roles (`Contributor` on Communication Services, plus `Storage Blob Data Owner`, `Queue Data Contributor`, and `Table Data Contributor` for the Function App).
-- **Secure Traffic**: HTTPS-only, TLS 1.2+, and CORS restricted strictly to the frontend URL.
+- [ ] Install **Azure CLI** and run `az login`.
+- [ ] Install **Terraform** (>= 1.5).
+- [ ] Ensure you have `Contributor` and `User Access Administrator` (or `Owner`) roles on the target subscription to manage Entra ID registrations.
+- [ ] Initialize Terraform: `cd infra && terraform init`.
 
-## Deployment Steps
+## 2. Infrastructure Provisioning (Terraform)
 
-### 1. Infrastructure (Terraform)
-Initialize and apply the Terraform configuration.
+- [ ] Create a `terraform.tfvars` file or prepare environment variables:
 
-```bash
-cd infra
-terraform init
-terraform apply -var="subscription_id=<YOUR_SUB_ID>"
-```
-
-**Note the Outputs:**
-- `tenant_id`: Your Azure Tenant ID.
-- `function_app_name`: The name of your Function App.
-- `static_web_app_url`: The URL of your frontend.
-
-### 2. Configure Frontend
-Update the frontend configuration with your Tenant ID to ensure correct authentication routing.
-
-1. Open `src/frontend/staticwebapp.config.json`.
-2. Replace `<YOUR_TENANT_ID>` with the `tenant_id` from the Terraform output.
-
-### 3. Configure Backend
-Update the local configuration file with your financial grouping details.
-
-1. Open `src/backend/config.json`.
-2. Update the `People`, `Owner`, and `SenderEmail` fields with your real data.
-
-### 4. Grant Access (Crucial Step)
-The infrastructure is secure by default. **No one (including you) can log in yet.**
-
-1. Go to the [Azure Portal](https://portal.azure.com).
-2. Navigate to **Microsoft Entra ID** -> **Enterprise applications**.
-3. Search for **`rmanalyzer-frontend`** (remove the filters if you don't see it).
-4. Select **Users and groups**.
-5. Click **Add user/group** and add yourself and any other users who need access.
-
-### 5. Backend Deployment
-Deploy the Python Function App.
-
-```bash
-cd src/backend
-func azure functionapp publish <FUNCTION_APP_NAME>
-```
-
-### 6. Frontend Deployment
-Deploy the Static Web App.
-
-```bash
-cd src/frontend
-swa deploy . --app-name <STATIC_WEB_APP_NAME>
-```
-*Note: If `swa deploy` fails, you may need to retrieve the deployment token from the Azure Portal (Static Web App -> Manage deployment token) and pass it with `--deployment-token <TOKEN>`.*
-
-## Usage
-1. Open the `static_web_app_url`.
-2. Log in with your Entra ID account.
-3. Select your transaction CSV file and click **Upload**.
-4. The file is sent securely to the backend, analyzed, and the summary email is sent immediately.
-
-## Local Development
-To run locally, your developer account (Azure CLI) needs the same permissions as the Managed Identity.
-
-1.  **Grant yourself roles**:
-    *   `Contributor` on the **Communication Service** resource (to send emails).
-    *   `Storage Blob Data Contributor` on the **Storage Account** (to test the audit upload, if enabled).
-2.  **Run Backend**:
-    ```bash
-    cd src/backend
-    func start
+    ```hcl
+    subscription_id = "your-guid-here"
+    project_name    = "rmanalyzer"
+    location        = "eastus"
     ```
-3.  **Run Frontend**:
-    ```bash
-    cd src/frontend
-    swa start . --api-location http://localhost:7071
-    ```
+
+- [ ] **Plan & Apply:**
+  - [ ] `terraform plan -out=main.tfplan`
+  - [ ] `terraform apply "main.tfplan"`
+- [ ] **Capture Outputs:** Note the `static_web_app_url`, `function_app_name`, and `tenant_id`.
+
+## 3. Post-Infrastructure Manual Steps
+
+- [ ] **Email Domain Verification:**
+  - Navigate to **Communication Services** > **Email** > **Domains** in the Azure Portal.
+  - Check if the `AzureManagedDomain` status is "Verified". It can take 5–15 minutes for Azure to fully provision the managed domain.
+- [ ] **Entra ID User Assignment:**
+  - Since `app_role_assignment_required = true` is set in `entra.tf`, you **must** manually assign users or groups to the Enterprise Application.
+  - Go to **Microsoft Entra ID** > **Enterprise applications** > Search for `rmanalyzer-frontend`.
+  - Select **Users and groups** > **Add user/group** and add yourself to gain login access.
+
+## 4. Application Code Deployment
+
+- [ ] **Backend (Azure Functions):**
+  - Install [Azure Functions Core Tools](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local).
+  - Run from the root:
+
+      ```bash
+      cd src/backend
+      func azure functionapp publish <YOUR_FUNCTION_APP_NAME_FROM_TERRAFORM>
+      ```
+
+- [ ] **Frontend (Static Web App):**
+  - The easiest way is using the [SWA CLI](https://azure.github.io/static-web-apps-cli/):
+
+      ```bash
+      cd src/frontend
+      swa deploy --app-location . --env production --resource-group <RG_NAME> --app-name <SWA_NAME>
+      ```
+
+  - *Alternatively*: Configure a GitHub Action/Azure DevOps pipeline using the deployment token provided in the SWA resource in the Portal.
+
+## 5. Security & Connectivity Verification
+
+- [ ] **Verify SWA Linkage:** In the portal, go to your **Static Web App** > **APIs**. Ensure your Function App appears as a "Linked" backend.
+- [ ] **Test Direct Access (Defense Check):**
+  - Try to access `https://<YOUR-FUNC>.azurewebsites.net/api/heartbeat`.
+  - It should return **401 Unauthorized** because only requests proxied via SWA are allowed.
+- [ ] **End-to-End Test:**
+  - Navigate to the `static_web_app_url`.
+  - Login via Entra ID (verify the redirect to `/.auth/login/aad/callback` works).
+  - Perform a transaction analysis to ensure the frontend can call the backend.
