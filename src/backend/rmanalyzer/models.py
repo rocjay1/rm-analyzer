@@ -65,10 +65,14 @@ class Person:
     def add_transaction(self, transaction: Transaction) -> None:
         self.transactions.append(transaction)
 
-    def get_oldest_transaction(self) -> date:
+    def get_oldest_transaction(self) -> Optional[date]:
+        if not self.transactions:
+            return None
         return min(t.date for t in self.transactions)
 
-    def get_newest_transaction(self) -> date:
+    def get_newest_transaction(self) -> Optional[date]:
+        if not self.transactions:
+            return None
         return max(t.date for t in self.transactions)
 
     def get_expenses(self, category: Optional[Category] = None) -> float:
@@ -94,10 +98,16 @@ class Group:
                     p.add_transaction(t)
 
     def get_oldest_transaction(self) -> date:
-        return min(p.get_oldest_transaction() for p in self.members)
+        dates = [p.get_oldest_transaction() for p in self.members if p.get_oldest_transaction()]
+        if not dates:
+            raise ValueError("No transactions found in group")
+        return min(dates)
 
     def get_newest_transaction(self) -> date:
-        return max(p.get_newest_transaction() for p in self.members)
+        dates = [p.get_newest_transaction() for p in self.members if p.get_newest_transaction()]
+        if not dates:
+            raise ValueError("No transactions found in group")
+        return max(dates)
 
     def get_expenses_difference(
         self, p1: Person, p2: Person, category: Optional[Category] = None

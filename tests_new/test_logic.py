@@ -27,6 +27,21 @@ class TestTransactionHelpers(unittest.TestCase):
         self.assertEqual(t.category, Category.DINING)
         self.assertEqual(t.ignore, IgnoredFrom.EVERYTHING)
 
+    def test_to_transaction_whitespace(self):
+        row = {
+            " Date ": " 2025-08-17 ",
+            "Name": "Test",
+            "Account Number": "123",
+            "Amount": "42.5",
+            "Category": "Dining & Drinks",
+            "Ignored From": "everything"
+        }
+        # Note: keys are usually cleaned by DictReader if configured, but here we test to_transaction direct usage
+        # Since to_transaction cleans keys too now:
+        t = to_transaction(row)
+        self.assertIsInstance(t, Transaction)
+        self.assertEqual(t.date, date(2025, 8, 17))
+
     def test_to_transaction_invalid(self):
         row = {"Date": "bad-date", "Name": "Test", "Account Number": "abc", "Amount": "bad", "Category": "bad", "Ignored From": "bad"}
         t = to_transaction(row)
@@ -36,6 +51,27 @@ class TestTransactionHelpers(unittest.TestCase):
         self.assertEqual(to_currency(42), "42.00")
         self.assertEqual(to_currency(0), "0.00")
         self.assertEqual(to_currency(3.14159), "3.14")
+
+    def test_get_transactions_csv_parsing(self):
+        # Ignored From must be empty string for NOTHING, or "everything" / "budget"
+        csv_content = """Date,Name,Account Number,Amount,Category,Ignored From
+2025-08-17,Test,123,42.5,Dining & Drinks,everything
+
+2025-08-18,Test2,123,10.0,Groceries,
+"""
+        transactions = get_transactions(csv_content)
+        self.assertEqual(len(transactions), 2)
+        self.assertEqual(transactions[0].name, "Test")
+        self.assertEqual(transactions[1].name, "Test2")
+
+    def test_get_transactions_csv_parsing_headers_whitespace(self):
+        csv_content = """ Date , Name , Account Number , Amount , Category , Ignored From
+2025-08-17,Test,123,42.5,Dining & Drinks,everything
+"""
+        transactions = get_transactions(csv_content)
+        self.assertEqual(len(transactions), 1)
+        self.assertEqual(transactions[0].name, "Test")
+
 
 class TestPersonGroup(unittest.TestCase):
     def setUp(self):
