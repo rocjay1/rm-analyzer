@@ -1,11 +1,11 @@
-# 1. Communication Services Access
+# Communication Services Access
 resource "azurerm_role_assignment" "comm_svc_contributor" {
   scope                = azurerm_communication_service.comm_svc.id
   role_definition_name = "Contributor"
   principal_id         = azurerm_linux_function_app.app.identity[0].principal_id
 }
 
-# 2. Storage Roles (Required for Keyless AzureWebJobsStorage)
+# Storage Roles (Required for Keyless AzureWebJobsStorage)
 # Blob Data Owner is required for the Functions Host to manage leases and artifacts
 resource "azurerm_role_assignment" "storage_blob_owner" {
   scope                = azurerm_storage_account.sa.id
