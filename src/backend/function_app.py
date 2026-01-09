@@ -1,0 +1,72 @@
+import azure.functions as func
+import logging
+import os
+import json
+
+from rmanalyzer.config import validate_config
+from rmanalyzer.transactions import get_transactions
+from rmanalyzer.models import Person, Group
+from rmanalyzer.emailer import SummaryEmail
+
+app = func.FunctionApp()
+
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
+
+def get_members(people_config: list[dict]) -> list[Person]:
+    return [
+        Person(
+            p["Name"],
+            p["Email"],
+            p["Accounts"],
+            []
+        )
+        for p in people_config
+    ]
+
+@app.route(route="upload", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)
+def upload_and_analyze(req: func.HttpRequest) -> func.HttpResponse:
+    """Receives a CSV, processes it immediately using local config, and sends an email."""
+    logging.info('Processing upload and analysis request.')
+    
+    try:
+        # 1. Get the uploaded file
+        if not req.files:
+            return func.HttpResponse("No file found in request.", status_code=400)
+        
+        file_key = list(req.files.keys())[0]
+        uploaded_file = req.files[file_key]
+        filename = uploaded_file.filename
+        csv_content = uploaded_file.stream.read().decode("utf-8")
+
+        # 2. Load Local Configuration
+        if not os.path.exists(CONFIG_PATH):
+            return func.HttpResponse("Configuration file not found on server.", status_code=500)
+            
+        with open(CONFIG_PATH, "r") as f:
+            config = json.load(f)
+        validate_config(config)
+
+        # 3. Run Analysis
+        transactions = get_transactions(csv_content)
+        members = get_members(config["People"])
+        group = Group(members)
+        group.add_transactions(transactions)
+
+        if not any(p.transactions for p in group.members):
+            return func.HttpResponse("No valid transactions found in the file for configured accounts.", status_code=400)
+
+        # 4. Send Email
+        sender = os.environ.get("SENDER_EMAIL", config.get("SenderEmail"))
+        if not sender:
+            return func.HttpResponse("Sender email not configured.", status_code=500)
+            
+        email = SummaryEmail(sender, [p.email for p in group.members])
+        email.add_body(group)
+        email.add_subject(group)
+        email.send()
+        
+        return func.HttpResponse(f"Analysis complete. Summary email sent for '{filename}'.", status_code=200)
+
+    except Exception as e:
+        logging.error(f"Error during immediate processing: {e}")
+        return func.HttpResponse(f"Processing Error: {str(e)}", status_code=500)

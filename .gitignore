@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.env
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+
+# Azure Functions
+local.settings.json
+.func/
+
+# VS Code
+.vscode/
+
+# Mac
+.DS_Store
+
+# Frontend
+node_modules/
+dist/
+.swa/
