@@ -27,6 +27,11 @@ def get_members(people_config: list[dict]) -> list[Person]:
 def upload_and_analyze(req: func.HttpRequest) -> func.HttpResponse:
     """Receives a CSV, processes it immediately using local config, and sends an email."""
     logging.info('Processing upload and analysis request.')
+
+    # Security check: Ensure the request is coming via Static Web App Authentication
+    client_principal = req.headers.get("x-ms-client-principal")
+    if not client_principal:
+        return func.HttpResponse("Unauthorized: Requests must be authenticated via Static Web App.", status_code=401)
     
     try:
         # 1. Get the uploaded file
