@@ -11,6 +11,11 @@ resource "azurerm_static_site" "web" {
   }
 }
 
+resource "azurerm_static_site_linked_backend" "backend" {
+  static_site_id  = azurerm_static_site.web.id
+  backend_resource_id = azurerm_linux_function_app.app.id
+}
+
 output "static_web_app_url" {
   value = azurerm_static_site.web.default_host_name
 }

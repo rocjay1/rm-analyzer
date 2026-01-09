@@ -25,16 +25,18 @@ resource "azurerm_linux_function_app" "app" {
     application_stack {
       python_version = "3.11"
     }
-    cors {
-      allowed_origins = ["https://${azurerm_static_site.web.default_host_name}"]
-    }
-    ftps_state = "FtpsOnly"
+    ftps_state = "Disabled"
   }
 
   app_settings = {
     "AzureWebJobsStorage__accountName"       = azurerm_storage_account.sa.name
+    "AzureWebJobsStorage__credential"        = "managedidentity"
+    "FUNCTIONS_WORKER_RUNTIME"               = "python"
+    "FUNCTIONS_EXTENSION_VERSION"            = "~4"
     "RM_ANALYZER_STORAGE_ACCOUNT_URL"        = azurerm_storage_account.sa.primary_blob_endpoint
-    "COMMUNICATION_SERVICES_ENDPOINT"        = "https://${azurerm_communication_service.comm_svc.name}.unitedstates.communication.azure.com"
+    # robustly extract endpoint from connection string to avoid region hardcoding
+    "COMMUNICATION_SERVICES_ENDPOINT"        = replace(regex("endpoint=[^;]+", azurerm_communication_service.comm_svc.primary_connection_string), "endpoint=", "")
+    "SENDER_EMAIL"                           = "DoNotReply@${azurerm_email_communication_service_domain.domain.from_sender_domain}"
     "BUILD_FLAGS"                            = "UseElf"
     "SCM_DO_BUILD_DURING_DEPLOYMENT"         = "true"
     "ENABLE_ORYX_BUILD"                      = "true"
