@@ -1,7 +1,0 @@
-.vscode/
-.python-version
-.coverage
-.mypy_cache/
-__pycache__
-.pytest_cache
-.venv/
