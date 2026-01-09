@@ -11,6 +11,22 @@ from rmanalyzer.emailer import SummaryEmail
 app = func.FunctionApp()
 
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
+_CONFIG_CACHE = None
+
+def get_config() -> dict:
+    """Load and validate configuration, using cache if available."""
+    global _CONFIG_CACHE
+    if _CONFIG_CACHE:
+        return _CONFIG_CACHE
+
+    if not os.path.exists(CONFIG_PATH):
+        raise FileNotFoundError("Configuration file not found on server.")
+
+    with open(CONFIG_PATH, "r") as f:
+        config = json.load(f)
+    validate_config(config)
+    _CONFIG_CACHE = config
+    return config
 
 def get_members(people_config: list[dict]) -> list[Person]:
     return [
@@ -44,12 +60,10 @@ def upload_and_analyze(req: func.HttpRequest) -> func.HttpResponse:
         csv_content = uploaded_file.stream.read().decode("utf-8")
 
         # 2. Load Local Configuration
-        if not os.path.exists(CONFIG_PATH):
+        try:
+            config = get_config()
+        except FileNotFoundError:
             return func.HttpResponse("Configuration file not found on server.", status_code=500)
-            
-        with open(CONFIG_PATH, "r") as f:
-            config = json.load(f)
-        validate_config(config)
 
         # 3. Run Analysis
         transactions = get_transactions(csv_content)
