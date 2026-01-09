@@ -7,4 +7,8 @@ resource "azurerm_storage_account" "sa" {
 
   min_tls_version          = "TLS1_2"
   https_traffic_only_enabled = true
+
+  # ENFORCE KEYLESS: Disable Account Keys and Public Access
+  shared_access_key_enabled      = false
+  allow_nested_items_to_be_public = false
 }
