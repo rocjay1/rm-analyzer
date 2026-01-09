@@ -14,7 +14,7 @@ def send_email(endpoint: str, sender: str, to: list[str], subject: str, body: st
     try:
         credential = DefaultAzureCredential()
         email_client = EmailClient(endpoint=endpoint, credential=credential)
-        
+
         message = {
             "senderAddress": sender,
             "recipients": {
@@ -26,11 +26,11 @@ def send_email(endpoint: str, sender: str, to: list[str], subject: str, body: st
                 "html": body,
             },
         }
-        
+
         poller = email_client.begin_send(message)
         result = poller.result()
         logger.info("Email sent with message ID: %s", result["messageId"])
-        
+
     except Exception as ex:
         logger.error("Error sending email: %s", ex)
         raise

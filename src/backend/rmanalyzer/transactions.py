@@ -10,12 +10,15 @@ MONEY_FORMAT = "{0:.2f}"
 
 def to_transaction(row: dict) -> Optional[Transaction]:
     try:
-        transaction_date = datetime.strptime(row["Date"], DATE).date()
-        transaction_name = str(row["Name"])
-        transaction_account_number = int(row["Account Number"])
-        transaction_amount = float(row["Amount"])
-        transaction_category = Category(row["Category"])
-        transaction_ignore = IgnoredFrom(row["Ignored From"])
+        # Normalize keys and values
+        clean_row = {k.strip(): v.strip() for k, v in row.items() if k}
+
+        transaction_date = datetime.strptime(clean_row["Date"], DATE).date()
+        transaction_name = str(clean_row["Name"])
+        transaction_account_number = int(clean_row["Account Number"])
+        transaction_amount = float(clean_row["Amount"])
+        transaction_category = Category(clean_row["Category"])
+        transaction_ignore = IgnoredFrom(clean_row["Ignored From"])
         return Transaction(
             transaction_date,
             transaction_name,
@@ -24,12 +27,19 @@ def to_transaction(row: dict) -> Optional[Transaction]:
             transaction_category,
             transaction_ignore,
         )
-    except (ValueError, KeyError):
+    except (ValueError, KeyError, AttributeError):
         return None
 
 def get_transactions(content: str) -> List[Transaction]:
-    rows = csv.DictReader(content.splitlines())
+    # Filter out empty lines before parsing
+    lines = [line for line in content.splitlines() if line.strip()]
+    rows = csv.DictReader(lines)
     transactions = []
+
+    # Handle case where fieldnames might have whitespace
+    if rows.fieldnames:
+        rows.fieldnames = [name.strip() for name in rows.fieldnames]
+
     for row in rows:
         transaction = to_transaction(row)
         if transaction:
