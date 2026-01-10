@@ -22,3 +22,9 @@ resource "azurerm_static_web_app_function_app_registration" "backend" {
   static_web_app_id = azurerm_static_web_app.web.id
   function_app_id   = azurerm_function_app_flex_consumption.app.id
 }
+
+resource "azurerm_static_web_app_custom_domain" "custom_domain" {
+  static_web_app_id = azurerm_static_web_app.web.id
+  domain_name       = cloudflare_dns_record.azure_swa.name
+  validation_type   = "cname-delegation"
+}
