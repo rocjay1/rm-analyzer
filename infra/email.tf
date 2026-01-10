@@ -13,9 +13,9 @@ resource "azurerm_communication_service" "comm_svc" {
 # Note: Managed Domains often require manual verification or DNS configuration that might take time.
 # For simplicity in this plan, we provision the domain resource but users might need to check portal status.
 resource "azurerm_email_communication_service_domain" "domain" {
-  name              = "AzureManagedDomain"
+  name              = "roccosmodernsite.net"
   email_service_id  = azurerm_email_communication_service.email_svc.id
-  domain_management = "AzureManaged"
+  domain_management = "CustomerManaged"
 }
 
 # Link the domain to the Communication Service
