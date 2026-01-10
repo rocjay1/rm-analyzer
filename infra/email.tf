@@ -29,9 +29,14 @@ resource "time_sleep" "wait_for_dns" {
   ]
 }
 
-# Link the domain to the Communication Service
 resource "azurerm_communication_service_email_domain_association" "assoc" {
   communication_service_id = azurerm_communication_service.comm_svc.id
   email_service_domain_id  = azurerm_email_communication_service_domain.domain.id
   depends_on               = [time_sleep.wait_for_dns]
+}
+
+resource "azurerm_role_assignment" "comm_svc_contributor" {
+  scope                = azurerm_communication_service.comm_svc.id
+  role_definition_name = "Contributor"
+  principal_id         = azurerm_function_app_flex_consumption.app.identity[0].principal_id
 }

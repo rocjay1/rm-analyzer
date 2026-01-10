@@ -2,7 +2,7 @@ data "azurerm_client_config" "current" {}
 
 resource "azuread_application_registration" "frontend_app" {
   display_name     = "${var.project_name}-frontend"
-  sign_in_audience = "AzureADMyOrg" # Restrict to this tenant only
+  sign_in_audience = "AzureADMyOrg"
 
   implicit_access_token_issuance_enabled = false
   implicit_id_token_issuance_enabled     = true
@@ -10,7 +10,7 @@ resource "azuread_application_registration" "frontend_app" {
 
 resource "azuread_service_principal" "frontend_sp" {
   client_id                    = azuread_application_registration.frontend_app.client_id
-  app_role_assignment_required = true # Require user assignment for access
+  app_role_assignment_required = true
 }
 
 resource "azuread_application_password" "frontend_secret" {

@@ -44,7 +44,7 @@ resource "azurerm_function_app_flex_consumption" "app" {
     "DEPLOYMENT_STORAGE_AUTHENTICATION_TYPE" = "SystemAssignedIdentity"
     "DEPLOYMENT_STORAGE_ACCOUNT_NAME"        = azurerm_storage_account.sa.name
     "RM_ANALYZER_STORAGE_ACCOUNT_URL"        = azurerm_storage_account.sa.primary_blob_endpoint
-    # robustly extract endpoint from connection string to avoid region hardcoding
+    # Robustly extract endpoint from connection string to avoid region hardcoding
     "COMMUNICATION_SERVICES_ENDPOINT" = replace(regex("endpoint=[^;]+", azurerm_communication_service.comm_svc.primary_connection_string), "endpoint=", "")
     "SENDER_EMAIL"                    = "DoNotReply@${azurerm_email_communication_service_domain.domain.from_sender_domain}"
     "BUILD_FLAGS"                     = "UseElf"
