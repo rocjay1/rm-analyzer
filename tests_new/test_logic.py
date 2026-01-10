@@ -1,16 +1,18 @@
+"""
+Tests for the business logic (models and transactions).
+"""
 import unittest
-import sys
-import os
 from datetime import date
-
-# Add src/backend to path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src/backend')))
 
 from rmanalyzer.models import Transaction, Category, IgnoredFrom, Person, Group
 from rmanalyzer.transactions import to_transaction, to_currency, get_transactions
 
+
 class TestTransactionHelpers(unittest.TestCase):
+    """Test suite for transaction helper functions."""
+
     def test_to_transaction_valid(self):
+        """Test conversion of a valid row to a Transaction object."""
         row = {
             "Date": "2025-08-17",
             "Name": "Test",
@@ -28,6 +30,7 @@ class TestTransactionHelpers(unittest.TestCase):
         self.assertEqual(t.ignore, IgnoredFrom.EVERYTHING)
 
     def test_to_transaction_whitespace(self):
+        """Test conversion of a row with whitespace in keys/values."""
         row = {
             " Date ": " 2025-08-17 ",
             "Name": "Test",
@@ -36,59 +39,84 @@ class TestTransactionHelpers(unittest.TestCase):
             "Category": "Dining & Drinks",
             "Ignored From": "everything"
         }
-        # Note: keys are usually cleaned by DictReader if configured, but here we test to_transaction direct usage
+        # Note: keys are usually cleaned by DictReader if configured,
+        # but here we test to_transaction direct usage
         # Since to_transaction cleans keys too now:
         t = to_transaction(row)
         self.assertIsInstance(t, Transaction)
         self.assertEqual(t.date, date(2025, 8, 17))
 
     def test_to_transaction_invalid(self):
-        row = {"Date": "bad-date", "Name": "Test", "Account Number": "abc", "Amount": "bad", "Category": "bad", "Ignored From": "bad"}
+        """Test conversion of an invalid row returns None."""
+        row = {
+            "Date": "bad-date",
+            "Name": "Test",
+            "Account Number": "abc",
+            "Amount": "bad",
+            "Category": "bad",
+            "Ignored From": "bad"
+        }
         t = to_transaction(row)
         self.assertIsNone(t)
 
     def test_to_currency(self):
+        """Test currency formatting."""
         self.assertEqual(to_currency(42), "42.00")
         self.assertEqual(to_currency(0), "0.00")
         self.assertEqual(to_currency(3.14159), "3.14")
 
     def test_get_transactions_csv_parsing(self):
+        """Test parsing transactions from CSV content."""
         # Ignored From must be empty string for NOTHING, or "everything" / "budget"
-        csv_content = """Date,Name,Account Number,Amount,Category,Ignored From
-2025-08-17,Test,123,42.5,Dining & Drinks,everything
-
-2025-08-18,Test2,123,10.0,Groceries,
-"""
+        csv_content = (
+            "Date,Name,Account Number,Amount,Category,Ignored From\n"
+            "2025-08-17,Test,123,42.5,Dining & Drinks,everything\n"
+            "\n"
+            "2025-08-18,Test2,123,10.0,Groceries,\n"
+        )
         transactions = get_transactions(csv_content)
         self.assertEqual(len(transactions), 2)
         self.assertEqual(transactions[0].name, "Test")
         self.assertEqual(transactions[1].name, "Test2")
 
     def test_get_transactions_csv_parsing_headers_whitespace(self):
-        csv_content = """ Date , Name , Account Number , Amount , Category , Ignored From
-2025-08-17,Test,123,42.5,Dining & Drinks,everything
-"""
+        """Test parsing CSV with whitespace in headers."""
+        csv_content = (
+            " Date , Name , Account Number , Amount , Category , Ignored From\n"
+            "2025-08-17,Test,123,42.5,Dining & Drinks,everything\n"
+        )
         transactions = get_transactions(csv_content)
         self.assertEqual(len(transactions), 1)
         self.assertEqual(transactions[0].name, "Test")
 
 
 class TestPersonGroup(unittest.TestCase):
+    """Test suite for Person and Group models."""
+
     def setUp(self):
-        self.t1 = Transaction(date(2025, 8, 1), "A", 1, 10.0, Category.DINING, IgnoredFrom.NOTHING)
-        self.t2 = Transaction(date(2025, 8, 2), "B", 1, 20.0, Category.GROCERIES, IgnoredFrom.NOTHING)
-        self.t3 = Transaction(date(2025, 8, 3), "C", 2, 30.0, Category.DINING, IgnoredFrom.NOTHING)
+        """Set up test fixtures."""
+        self.t1 = Transaction(
+            date(2025, 8, 1), "A", 1, 10.0, Category.DINING, IgnoredFrom.NOTHING
+        )
+        self.t2 = Transaction(
+            date(2025, 8, 2), "B", 1, 20.0, Category.GROCERIES, IgnoredFrom.NOTHING
+        )
+        self.t3 = Transaction(
+            date(2025, 8, 3), "C", 2, 30.0, Category.DINING, IgnoredFrom.NOTHING
+        )
         self.p1 = Person("Alice", "alice@example.com", [1], [self.t1, self.t2])
         self.p2 = Person("Bob", "bob@example.com", [2], [self.t3])
         self.group = Group([self.p1, self.p2])
 
     def test_person_expenses(self):
+        """Test calculating person expenses."""
         self.assertEqual(self.p1.get_expenses(), 30.0)
         self.assertEqual(self.p2.get_expenses(), 30.0)
         self.assertEqual(self.p1.get_expenses(Category.DINING), 10.0)
         self.assertEqual(self.p2.get_expenses(Category.DINING), 30.0)
 
     def test_group_expenses(self):
+        """Test calculating group expenses."""
         self.assertEqual(self.group.get_expenses(), 60.0)
         diff = self.group.get_expenses_difference(self.p1, self.p2)
         self.assertEqual(diff, 0.0)
@@ -96,6 +124,7 @@ class TestPersonGroup(unittest.TestCase):
         self.assertEqual(debt, 0.0)
 
     def test_group_add_transactions(self):
+        """Test adding transactions to a group."""
         t4 = Transaction(date(2025, 8, 4), "D", 1, 5.0, Category.DINING, IgnoredFrom.NOTHING)
         self.group.add_transactions([t4])
         self.assertIn(t4, self.p1.transactions)
