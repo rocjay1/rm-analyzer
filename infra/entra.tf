@@ -1,6 +1,5 @@
 data "azurerm_client_config" "current" {}
 
-# App Registration (Modern Resource)
 resource "azuread_application_registration" "frontend_app" {
   display_name     = "${var.project_name}-frontend"
   sign_in_audience = "AzureADMyOrg" # Restrict to this tenant only
@@ -9,19 +8,15 @@ resource "azuread_application_registration" "frontend_app" {
   implicit_id_token_issuance_enabled     = true
 }
 
-# Service Principal (Enterprise App)
 resource "azuread_service_principal" "frontend_sp" {
   client_id                    = azuread_application_registration.frontend_app.client_id
-  app_role_assignment_required = true
+  app_role_assignment_required = true # Require user assignment for access
 }
 
-# Client Secret for the App
 resource "azuread_application_password" "frontend_secret" {
   application_id = azuread_application_registration.frontend_app.id
 }
 
-# Register the SWA Redirect URI (Callback)
-# This resource IS compatible with azuread_application_registration
 resource "azuread_application_redirect_uris" "swa_callback" {
   application_id = azuread_application_registration.frontend_app.id
   type           = "Web"
@@ -29,8 +24,4 @@ resource "azuread_application_redirect_uris" "swa_callback" {
   redirect_uris = [
     "https://${azurerm_static_web_app.web.default_host_name}/.auth/login/aad/callback"
   ]
-}
-
-output "tenant_id" {
-  value = data.azurerm_client_config.current.tenant_id
 }

@@ -14,8 +14,6 @@ resource "cloudflare_zone_dnssec" "main_zone_dnssec" {
   status              = "active"
 }
 
-# Azure Email Communication Service Verification Records
-
 resource "cloudflare_dns_record" "azure_verification_txt" {
   zone_id    = var.zone_id
   name       = azurerm_email_communication_service_domain.domain.verification_records[0].domain[0].name
