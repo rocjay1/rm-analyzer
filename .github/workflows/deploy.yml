@@ -1,0 +1,62 @@
+name: Deploy to Azure
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    name: Deploy Frontend (SWA)
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to Azure Static Web App
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: "upload"
+          app_location: "src/frontend"
+          output_location: "." # No build step for vanilla JS/HTML
+          # api_location is optional/not needed if managed separately or if using BYO functions, 
+          # but here we are deploying backend separately to a Flex Consumption plan.
+          skip_app_build: true
+
+  deploy-backend:
+    runs-on: ubuntu-latest
+    name: Deploy Backend (Function App)
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r src/backend/requirements.txt --target="src/backend/.python_packages/lib/site-packages"
+
+      - name: Log in to Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to Azure Function App
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ secrets.AZURE_FUNCTION_APP_NAME }}
+          package: 'src/backend'
+          scm-do-build-during-deployment: true
+          enable-oryx-build: true

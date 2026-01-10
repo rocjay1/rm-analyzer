@@ -47,3 +47,9 @@ variable "zone_name" {
   description = "Cloud zone name"
   type        = string
 }
+
+variable "github_repo" {
+  type        = string
+  default     = "rocjay1/rm-analyzer"
+  description = "The GitHub repository in 'owner/repo' format for OIDC trust."
+}
