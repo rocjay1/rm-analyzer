@@ -24,7 +24,7 @@ resource "cloudflare_dns_record" "azure_verification_txt" {
   type       = "TXT"
   content    = azurerm_email_communication_service_domain.domain.verification_records[0].domain[0].value
   proxied    = false
-  ttl        = 60
+  ttl        = 300
   depends_on = [azurerm_email_communication_service_domain.domain]
 }
 
@@ -34,7 +34,7 @@ resource "cloudflare_dns_record" "azure_spf" {
   type       = "TXT"
   content    = azurerm_email_communication_service_domain.domain.verification_records[0].spf[0].value
   proxied    = false
-  ttl        = 60
+  ttl        = 300
   depends_on = [azurerm_email_communication_service_domain.domain]
 }
 
@@ -44,7 +44,7 @@ resource "cloudflare_dns_record" "azure_dkim" {
   type       = "CNAME"
   content    = azurerm_email_communication_service_domain.domain.verification_records[0].dkim[0].value
   proxied    = false
-  ttl        = 60
+  ttl        = 300
   depends_on = [azurerm_email_communication_service_domain.domain]
 }
 
@@ -54,6 +54,16 @@ resource "cloudflare_dns_record" "azure_dkim2" {
   type       = "CNAME"
   content    = azurerm_email_communication_service_domain.domain.verification_records[0].dkim2[0].value
   proxied    = false
-  ttl        = 60
+  ttl        = 300
   depends_on = [azurerm_email_communication_service_domain.domain]
+}
+
+resource "cloudflare_dns_record" "azure_swa" {
+  zone_id    = var.zone_id
+  name       = "rm-analyzer"
+  type       = "CNAME"
+  content    = azurerm_static_web_app.web.default_host_name
+  proxied    = false
+  ttl        = 300
+  depends_on = [azurerm_static_web_app.web]
 }
