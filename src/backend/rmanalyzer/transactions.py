@@ -59,11 +59,8 @@ def to_transaction(row: dict) -> Tuple[Optional[Transaction], Optional[str]]:
         try:
             transaction_category = Category(clean_row["Category"])
         except (ValueError, KeyError):
-            valid_cats = ", ".join([c.value for c in Category])
-            return (
-                None,
-                f"Invalid or missing 'Category': {clean_row.get('Category')}. Valid categories: {valid_cats}",
-            )
+            # Treat unknown categories as OTHER
+            transaction_category = Category.OTHER
 
         try:
             # Handle empty string for NOTHING

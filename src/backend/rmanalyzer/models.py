@@ -21,6 +21,7 @@ class Category(Enum):
     PURCHASES = "Shared Purchases"
     SUBSCRIPTIONS = "Shared Subscriptions"
     TRAVEL = "Travel & Vacation"
+    OTHER = "Other"
 
 
 class IgnoredFrom(Enum):
