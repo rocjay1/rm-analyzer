@@ -26,3 +26,24 @@ variable "subscription_id" {
   type        = string
   description = "Target Azure Subscription ID"
 }
+
+variable "cloudflare_api_token" {
+  description = "API token with permissions for DNS edits and Zero Trust tunnel management."
+  type        = string
+  sensitive   = true
+}
+
+variable "account_id" {
+  description = "Cloudflare account ID."
+  type        = string
+}
+
+variable "zone_id" {
+  description = "Cloudflare zone ID."
+  type        = string
+}
+
+variable "zone_name" {
+  description = "Cloud zone name"
+  type        = string
+}
