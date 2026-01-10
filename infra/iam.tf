@@ -1,3 +1,11 @@
+# Grant the user running Terraform access to the storage account data plane
+# This is required because shared keys are disabled, so Terraform needs RBAC to poll/verify the resource.
+resource "azurerm_role_assignment" "tf_user_blob_owner" {
+  scope                = azurerm_storage_account.sa.id
+  role_definition_name = "Storage Blob Data Owner"
+  principal_id         = data.azurerm_client_config.current.object_id
+}
+
 # Communication Services Access
 resource "azurerm_role_assignment" "comm_svc_contributor" {
   scope                = azurerm_communication_service.comm_svc.id
