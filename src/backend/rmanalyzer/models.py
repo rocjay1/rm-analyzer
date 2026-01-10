@@ -1,3 +1,7 @@
+"""
+Data models for transactions, people, and groups.
+"""
+
 from datetime import date
 from enum import Enum
 from typing import List, Optional
@@ -68,19 +72,23 @@ class Person:
         self.transactions = transactions or []
 
     def add_transaction(self, transaction: Transaction) -> None:
+        """Add a transaction to the person's list."""
         self.transactions.append(transaction)
 
     def get_oldest_transaction(self) -> Optional[date]:
+        """Return the date of the oldest transaction."""
         if not self.transactions:
             return None
         return min(t.date for t in self.transactions)
 
     def get_newest_transaction(self) -> Optional[date]:
+        """Return the date of the newest transaction."""
         if not self.transactions:
             return None
         return max(t.date for t in self.transactions)
 
     def get_expenses(self, category: Optional[Category] = None) -> float:
+        """Calculate total expenses, optionally filtered by category."""
         if not self.transactions:
             return 0.0
         if not category:
@@ -95,6 +103,7 @@ class Group:
         self.members = members
 
     def add_transactions(self, transactions: List[Transaction]) -> None:
+        """Add a list of transactions to the appropriate members."""
         for t in transactions:
             for p in self.members:
                 if (
@@ -105,6 +114,7 @@ class Group:
                     p.add_transaction(t)
 
     def get_oldest_transaction(self) -> date:
+        """Return the date of the oldest transaction in the group."""
         dates = [
             p.get_oldest_transaction()
             for p in self.members
@@ -115,6 +125,7 @@ class Group:
         return min(dates)
 
     def get_newest_transaction(self) -> date:
+        """Return the date of the newest transaction in the group."""
         dates = [
             p.get_newest_transaction()
             for p in self.members
@@ -127,15 +138,18 @@ class Group:
     def get_expenses_difference(
         self, p1: Person, p2: Person, category: Optional[Category] = None
     ) -> float:
+        """Calculate the difference in expenses between two people."""
         missing = [p for p in [p1, p2] if p not in self.members]
         if missing:
             raise ValueError("People args missing from group")
         return p1.get_expenses(category) - p2.get_expenses(category)
 
     def get_expenses(self) -> float:
+        """Calculate the total expenses of the group."""
         return sum(p.get_expenses() for p in self.members)
 
     def get_debt(self, p1: Person, p2: Person, p1_scale_factor: float = 0.5) -> float:
+        """Calculate how much p1 owes p2 based on a scale factor."""
         missing = [p for p in [p1, p2] if p not in self.members]
         if missing:
             raise ValueError("People args missing from group")

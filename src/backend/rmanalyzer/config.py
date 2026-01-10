@@ -1,3 +1,7 @@
+"""
+Configuration management for RMAnalyzer.
+"""
+
 import json
 import logging
 
@@ -9,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 def validate_config(config: dict) -> None:
+    """Validate the structure and types of the configuration dictionary."""
     try:
         people = config["People"]
         check_type(people, list[dict])
@@ -23,6 +28,7 @@ def validate_config(config: dict) -> None:
 
 
 def get_config_from_str(config_str: str) -> dict:
+    """Parse configuration from a JSON string."""
     try:
         return json.loads(config_str)
     except json.JSONDecodeError as ex:

@@ -3,8 +3,6 @@ ignore-patterns=tests
 
 [MESSAGES CONTROL]
 # Disable the following messages:
-# C0114: Missing module docstring (We will add these, but acceptable to ignore if redundant)
-# C0116: Missing function or method docstring (We will add these)
 # R0903: Too few public methods (Models often have few methods)
 # R0913: Too many arguments (Constructors often need many args)
 # R0917: Too many positional arguments
@@ -13,7 +11,7 @@ ignore-patterns=tests
 # W0603: Using global statement (Valid for function app caching)
 # C0301: Line too long (Relaxing to 120)
 # R0911: Too many return statements (7/6 is acceptable for a main handler function with multiple validation steps)
-disable=R0903,W1203,C0114,C0116,R0911,W0603,W0718,R0913,R0917
+disable=R0903,W1203,R0911,W0603,W0718,R0913,R0917
 
 [FORMAT]
 max-line-length=120

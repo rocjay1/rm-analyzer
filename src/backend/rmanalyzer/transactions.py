@@ -1,3 +1,7 @@
+"""
+Transaction parsing and handling utilities.
+"""
+
 import csv
 from datetime import datetime
 from typing import List, Optional, Tuple
@@ -13,6 +17,7 @@ DATE_FORMATS = ["%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d"]
 
 
 def parse_date(date_str: str) -> Optional[datetime.date]:
+    """Parse a date string using supported formats."""
     for fmt in DATE_FORMATS:
         try:
             return datetime.strptime(date_str, fmt).date()
@@ -113,4 +118,5 @@ def get_transactions(content: str) -> Tuple[List[Transaction], List[str]]:
 
 
 def to_currency(num: float) -> str:
+    """Format a number as a currency string."""
     return MONEY_FORMAT.format(num)
