@@ -26,7 +26,7 @@ class IgnoredFrom(Enum):
     """Flags for ignoring transactions from certain calculations."""
     BUDGET = "budget"
     EVERYTHING = "everything"
-    NOTHING = str()
+    NOTHING = ""
 
 
 class Transaction:
