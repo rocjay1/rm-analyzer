@@ -15,15 +15,3 @@ resource "azurerm_static_web_app_function_app_registration" "backend" {
   static_web_app_id = azurerm_static_web_app.web.id
   function_app_id   = azurerm_function_app_flex_consumption.app.id
 }
-
-output "static_web_app_url" {
-  value = azurerm_static_web_app.web.default_host_name
-}
-
-output "function_app_name" {
-  value = azurerm_function_app_flex_consumption.app.name
-}
-
-output "resource_group_name" {
-  value = azurerm_resource_group.rg.name
-}

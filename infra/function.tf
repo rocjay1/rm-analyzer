@@ -24,8 +24,7 @@ resource "azurerm_function_app_flex_consumption" "app" {
     type = "SystemAssigned"
   }
 
-  site_config {
-  }
+  site_config {}
 
   lifecycle {
     ignore_changes = [
@@ -48,7 +47,5 @@ resource "azurerm_function_app_flex_consumption" "app" {
     "COMMUNICATION_SERVICES_ENDPOINT" = replace(regex("endpoint=[^;]+", azurerm_communication_service.comm_svc.primary_connection_string), "endpoint=", "")
     "SENDER_EMAIL"                    = "DoNotReply@${azurerm_email_communication_service_domain.domain.from_sender_domain}"
     "BUILD_FLAGS"                     = "UseElf"
-    "SCM_DO_BUILD_DURING_DEPLOYMENT"  = "true"
-    "ENABLE_ORYX_BUILD"               = "true"
   }
 }
