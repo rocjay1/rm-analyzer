@@ -13,7 +13,7 @@ resource "azurerm_static_web_app" "web" {
 
 resource "azurerm_static_web_app_function_app_registration" "backend" {
   static_web_app_id = azurerm_static_web_app.web.id
-  function_app_id   = azurerm_linux_function_app.app.id
+  function_app_id   = azurerm_function_app_flex_consumption.app.id
 }
 
 output "static_web_app_url" {
@@ -21,7 +21,7 @@ output "static_web_app_url" {
 }
 
 output "function_app_name" {
-  value = azurerm_linux_function_app.app.name
+  value = azurerm_function_app_flex_consumption.app.name
 }
 
 output "resource_group_name" {
