@@ -26,6 +26,15 @@ resource "cloudflare_dns_record" "azure_verification_txt" {
   depends_on = [azurerm_email_communication_service_domain.domain]
 }
 
+resource "cloudflare_dns_record" "ms_domain_verification" {
+  zone_id = var.zone_id
+  name    = "roccosmodernsite.net"
+  type    = "TXT"
+  content = "ms-domain-verification=52555837-20c4-4b47-8f07-54e858d395a2"
+  ttl     = 3600
+  proxied = false
+}
+
 resource "cloudflare_dns_record" "azure_spf" {
   zone_id = var.zone_id
   name    = azurerm_email_communication_service_domain.domain.verification_records[0].spf[0].name
