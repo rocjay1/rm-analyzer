@@ -27,6 +27,10 @@ resource "azurerm_function_app_flex_consumption" "app" {
   site_config {
   }
 
+  auth_settings_v2 {
+    auth_enabled = false
+  }
+
   app_settings = {
     "APPLICATIONINSIGHTS_CONNECTION_STRING" = azurerm_application_insights.app_insights.connection_string
     "APPINSIGHTS_INSTRUMENTATIONKEY"        = azurerm_application_insights.app_insights.instrumentation_key
