@@ -30,7 +30,9 @@ resource "azurerm_function_app_flex_consumption" "app" {
     ignore_changes = [
       tags,
       auth_settings_v2,
-      site_config
+      site_config,
+      app_settings["APPINSIGHTS_INSTRUMENTATIONKEY"],
+      app_settings["APPLICATIONINSIGHTS_CONNECTION_STRING"]
     ]
   }
 
