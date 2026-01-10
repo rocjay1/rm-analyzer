@@ -6,42 +6,43 @@ resource "azurerm_service_plan" "plan" {
   sku_name            = "FC1" # Flex Consumption
 }
 
-resource "azurerm_linux_function_app" "app" {
+resource "azurerm_function_app_flex_consumption" "app" {
   name                = "${var.project_name}-func-${local.resource_suffix}"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
 
-  storage_account_name          = azurerm_storage_account.sa.name
-  storage_uses_managed_identity = true
-  service_plan_id               = azurerm_service_plan.plan.id
+  service_plan_id = azurerm_service_plan.plan.id
 
-  https_only = true
+  storage_container_endpoint  = "${azurerm_storage_account.sa.primary_blob_endpoint}${azurerm_storage_container.deployment.name}"
+  storage_container_type      = "blobContainer"
+  storage_authentication_type = "SystemAssignedIdentity"
+
+  runtime_name    = "python"
+  runtime_version = "3.12"
 
   identity {
     type = "SystemAssigned"
   }
 
   site_config {
-    application_stack {
-      python_version = "3.12"
-    }
-    ftps_state = "Disabled"
   }
 
   lifecycle {
     ignore_changes = [
-      auth_settings_v2
+      tags,
+      # Ignore hidden link tags that Azure adds
     ]
   }
 
   app_settings = {
+    # Workaround for known issue: explicit empty connection string
+    "AzureWebJobsStorage"                    = ""
     "AzureWebJobsStorage__accountName"       = azurerm_storage_account.sa.name
     "AzureWebJobsStorage__credential"        = "managedidentity"
     "DEPLOYMENT_STORAGE_AUTHENTICATION_TYPE" = "SystemAssignedIdentity"
     "DEPLOYMENT_STORAGE_ACCOUNT_NAME"        = azurerm_storage_account.sa.name
     "FUNCTIONS_WORKER_RUNTIME"               = "python"
-    "FUNCTIONS_EXTENSION_VERSION"      = "~4"
-    "RM_ANALYZER_STORAGE_ACCOUNT_URL"  = azurerm_storage_account.sa.primary_blob_endpoint
+    "RM_ANALYZER_STORAGE_ACCOUNT_URL"        = azurerm_storage_account.sa.primary_blob_endpoint
     # robustly extract endpoint from connection string to avoid region hardcoding
     "COMMUNICATION_SERVICES_ENDPOINT" = replace(regex("endpoint=[^;]+", azurerm_communication_service.comm_svc.primary_connection_string), "endpoint=", "")
     "SENDER_EMAIL"                    = "DoNotReply@${azurerm_email_communication_service_domain.domain.from_sender_domain}"
