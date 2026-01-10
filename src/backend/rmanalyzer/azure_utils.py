@@ -1,15 +1,20 @@
 """
 Azure Communication Services utility functions for RMAnalyzer.
 """
+
 import logging
-from azure.identity import DefaultAzureCredential
+
 from azure.communication.email import EmailClient
+from azure.identity import DefaultAzureCredential
 
 __all__ = ["send_email"]
 
 logger = logging.getLogger(__name__)
 
-def send_email(endpoint: str, sender: str, to: list[str], subject: str, body: str) -> None:
+
+def send_email(
+    endpoint: str, sender: str, to: list[str], subject: str, body: str
+) -> None:
     """Send an email using Azure Communication Services and Managed Identity."""
     try:
         credential = DefaultAzureCredential()
@@ -33,9 +38,13 @@ def send_email(endpoint: str, sender: str, to: list[str], subject: str, body: st
         # Extract message ID (result might be dict or object)
         message_id = None
         if isinstance(result, dict):
-            message_id = result.get("messageId") or result.get("message_id") or result.get("id")
+            message_id = (
+                result.get("messageId") or result.get("message_id") or result.get("id")
+            )
         else:
-            message_id = getattr(result, "message_id", None) or getattr(result, "id", None)
+            message_id = getattr(result, "message_id", None) or getattr(
+                result, "id", None
+            )
 
         if message_id:
             logger.info("Email sent with message ID: %s", message_id)

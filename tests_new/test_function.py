@@ -1,15 +1,15 @@
 """
 Tests for the Azure Function App.
 """
+
 import unittest
 from datetime import date
 from unittest.mock import MagicMock, patch
 
 import azure.functions as func
-
-from function_app import upload_and_analyze
 import function_app
-from rmanalyzer.models import Transaction, Category, IgnoredFrom
+from function_app import upload_and_analyze
+from rmanalyzer.models import Category, IgnoredFrom, Transaction
 
 
 class TestFunctionApp(unittest.TestCase):
@@ -58,19 +58,28 @@ class TestFunctionApp(unittest.TestCase):
     @patch("function_app.SummaryEmail")
     # pylint: disable=too-many-arguments, too-many-positional-arguments
     def test_success(
-            self, mock_email, mock_get_trans, _mock_validate,
-            mock_json_load, _mock_open, mock_exists
+        self,
+        mock_email,
+        mock_get_trans,
+        _mock_validate,
+        mock_json_load,
+        _mock_open,
+        mock_exists,
     ):
         """Test successful execution."""
         mock_exists.return_value = True
         mock_json_load.return_value = {
-            "People": [{"Name": "Alice", "Email": "alice@example.com", "Accounts": [123]}],
+            "People": [
+                {"Name": "Alice", "Email": "alice@example.com", "Accounts": [123]}
+            ],
             "Owner": "Alice",
-            "SenderEmail": "sender@example.com"
+            "SenderEmail": "sender@example.com",
         }
 
         # Mock transaction that matches the person's account (123) and is not ignored
-        t = Transaction(date(2025, 8, 17), "Test", 123, 42.5, Category.DINING, IgnoredFrom.NOTHING)
+        t = Transaction(
+            date(2025, 8, 17), "Test", 123, 42.5, Category.DINING, IgnoredFrom.NOTHING
+        )
         # Mock return value of get_transactions to return (transactions, errors) tuple
         mock_get_trans.return_value = ([t], [])
 
@@ -85,6 +94,7 @@ class TestFunctionApp(unittest.TestCase):
 
         # json.load should have been called ONCE.
         self.assertEqual(mock_json_load.call_count, 1)
+
 
 if __name__ == "__main__":
     unittest.main()

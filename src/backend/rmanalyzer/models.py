@@ -13,6 +13,7 @@ __all__ = [
 
 class Category(Enum):
     """Spending categories for transactions."""
+
     DINING = "Dining & Drinks"
     GROCERIES = "Groceries"
     PETS = "Pets"
@@ -24,6 +25,7 @@ class Category(Enum):
 
 class IgnoredFrom(Enum):
     """Flags for ignoring transactions from certain calculations."""
+
     BUDGET = "budget"
     EVERYTHING = "everything"
     NOTHING = ""
@@ -31,6 +33,7 @@ class IgnoredFrom(Enum):
 
 class Transaction:
     """A single financial transaction."""
+
     def __init__(
         self,
         transact_date: date,
@@ -50,6 +53,7 @@ class Transaction:
 
 class Person:
     """A person with accounts and transactions."""
+
     def __init__(
         self,
         name: str,
@@ -85,6 +89,7 @@ class Person:
 
 class Group:
     """A group of people for expense analysis."""
+
     def __init__(self, members: List[Person]) -> None:
         self.members = members
 
@@ -98,13 +103,21 @@ class Group:
                     p.add_transaction(t)
 
     def get_oldest_transaction(self) -> date:
-        dates = [p.get_oldest_transaction() for p in self.members if p.get_oldest_transaction()]
+        dates = [
+            p.get_oldest_transaction()
+            for p in self.members
+            if p.get_oldest_transaction()
+        ]
         if not dates:
             raise ValueError("No transactions found in group")
         return min(dates)
 
     def get_newest_transaction(self) -> date:
-        dates = [p.get_newest_transaction() for p in self.members if p.get_newest_transaction()]
+        dates = [
+            p.get_newest_transaction()
+            for p in self.members
+            if p.get_newest_transaction()
+        ]
         if not dates:
             raise ValueError("No transactions found in group")
         return max(dates)
