@@ -22,9 +22,9 @@ resource "cloudflare_dns_record" "azure_verification_txt" {
   zone_id    = var.zone_id
   name       = azurerm_email_communication_service_domain.domain.verification_records[0].domain[0].name
   type       = "TXT"
-  content    = azurerm_email_communication_service_domain.domain.verification_records[0].domain[0].value
+  content    = "\"${azurerm_email_communication_service_domain.domain.verification_records[0].domain[0].value}\""
   proxied    = false
-  ttl        = 300
+  ttl        = 1
   depends_on = [azurerm_email_communication_service_domain.domain]
 }
 
@@ -32,9 +32,9 @@ resource "cloudflare_dns_record" "azure_spf" {
   zone_id    = var.zone_id
   name       = azurerm_email_communication_service_domain.domain.verification_records[0].spf[0].name
   type       = "TXT"
-  content    = azurerm_email_communication_service_domain.domain.verification_records[0].spf[0].value
+  content    = "\"${azurerm_email_communication_service_domain.domain.verification_records[0].spf[0].value}\""
   proxied    = false
-  ttl        = 300
+  ttl        = 1
   depends_on = [azurerm_email_communication_service_domain.domain]
 }
 
@@ -43,8 +43,8 @@ resource "cloudflare_dns_record" "azure_dkim" {
   name       = azurerm_email_communication_service_domain.domain.verification_records[0].dkim[0].name
   type       = "CNAME"
   content    = azurerm_email_communication_service_domain.domain.verification_records[0].dkim[0].value
-  proxied    = false
-  ttl        = 300
+  proxied    = true
+  ttl        = 1
   depends_on = [azurerm_email_communication_service_domain.domain]
 }
 
@@ -53,8 +53,8 @@ resource "cloudflare_dns_record" "azure_dkim2" {
   name       = azurerm_email_communication_service_domain.domain.verification_records[0].dkim2[0].name
   type       = "CNAME"
   content    = azurerm_email_communication_service_domain.domain.verification_records[0].dkim2[0].value
-  proxied    = false
-  ttl        = 300
+  proxied    = true
+  ttl        = 1
   depends_on = [azurerm_email_communication_service_domain.domain]
 }
 
@@ -63,7 +63,7 @@ resource "cloudflare_dns_record" "azure_swa" {
   name       = "rm-analyzer"
   type       = "CNAME"
   content    = azurerm_static_web_app.web.default_host_name
-  proxied    = false
-  ttl        = 300
+  proxied    = true
+  ttl        = 1
   depends_on = [azurerm_static_web_app.web]
 }
