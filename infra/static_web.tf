@@ -9,6 +9,13 @@ resource "azurerm_static_web_app" "web" {
     "AZURE_CLIENT_ID"     = azuread_application_registration.frontend_app.client_id
     "AZURE_CLIENT_SECRET" = azuread_application_password.frontend_secret.value
   }
+
+  lifecycle {
+    ignore_changes = [
+      repository_url,
+      repository_branch
+    ]
+  }
 }
 
 resource "azurerm_static_web_app_function_app_registration" "backend" {
