@@ -2,14 +2,14 @@
 
 ## 1. Prerequisites
 
-- [ ] Install **Azure CLI** and run `az login`.
-- [ ] Install **Terraform** (>= 1.5).
-- [ ] Ensure you have `Contributor` and `User Access Administrator` (or `Owner`) roles on the target subscription to manage Entra ID registrations.
-- [ ] Initialize Terraform: `cd infra && terraform init`.
+- [x] Install **Azure CLI** and run `az login`.
+- [x] Install **Terraform** (>= 1.5).
+- [x] Ensure you have `Contributor` and `User Access Administrator` (or `Owner`) roles on the target subscription to manage Entra ID registrations.
+- [x] Initialize Terraform: `cd infra && terraform init`.
 
 ## 2. Infrastructure Provisioning (Terraform)
 
-- [ ] Create a `terraform.tfvars` file or prepare environment variables:
+- [x] Create a `terraform.tfvars` file or prepare environment variables:
 
     ```hcl
     subscription_id = "your-guid-here"
@@ -18,7 +18,7 @@
     ```
 
 - [ ] **Plan & Apply:**
-  - [ ] `terraform plan -out=main.tfplan`
+  - [x] `terraform plan -out=main.tfplan`
   - [ ] `terraform apply "main.tfplan"`
 - [ ] **Capture Outputs:** Note the `static_web_app_url`, `function_app_name`, and `tenant_id`.
 
