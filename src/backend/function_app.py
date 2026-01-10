@@ -4,7 +4,7 @@ import os
 from typing import Optional, Tuple
 
 import azure.functions as func
-from rmanalyzer.config import validate_config
+from rmanalyzer.config import get_config_from_str, validate_config
 from rmanalyzer.emailer import SummaryEmail
 from rmanalyzer.models import Group, Person
 from rmanalyzer.transactions import get_transactions
@@ -24,8 +24,19 @@ def get_config() -> dict:
     if _CONFIG_CACHE:
         return _CONFIG_CACHE
 
+    # 1. Try Environment Variable (Production)
+    env_config = os.environ.get("APP_CONFIG_JSON")
+    if env_config:
+        config = get_config_from_str(env_config)
+        validate_config(config)
+        _CONFIG_CACHE = config
+        return config
+
+    # 2. Try File (Local Dev)
     if not os.path.exists(CONFIG_PATH):
-        raise FileNotFoundError("Configuration file not found on server.")
+        raise FileNotFoundError(
+            "Configuration file not found on server (and APP_CONFIG_JSON not set)."
+        )
 
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:
         config = json.load(f)
