@@ -1,3 +1,7 @@
+"""
+Azure Function App entry point for RMAnalyzer.
+"""
+
 import json
 import logging
 import os
@@ -46,6 +50,7 @@ def get_config() -> dict:
 
 
 def get_members(people_config: list[dict]) -> list[Person]:
+    """Convert config dicts to Person objects."""
     return [Person(p["Name"], p["Email"], p["Accounts"], []) for p in people_config]
 
 

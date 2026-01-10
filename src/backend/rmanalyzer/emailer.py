@@ -23,6 +23,7 @@ class SummaryEmail:
         self.body = str()
 
     def add_body(self, group: Group) -> None:
+        """Generate the HTML body of the email based on the group's expenses."""
         tracked_categories = [c for c in Category if c != Category.OTHER]
         doc, tag, text = yattag.Doc().tagtext()
         doc.asis("<!DOCTYPE html>")
@@ -74,21 +75,19 @@ class SummaryEmail:
                                     )
                 if len(group.members) == 2:
                     p1, p2 = group.members
-                    scale = 0.445
-                    msg = (
-                        f"Using a scale factor of {scale} for {p1.name}, "
-                        f"{p1.name} owes {p2.name}: {to_currency(group.get_debt(p1, p2, scale))}"
-                    )
+                    msg = f"{p1.name} owes {p2.name}: {to_currency(group.get_debt(p1, p2))}"
                     with tag("p"):
                         text(msg)
         self.body = doc.getvalue()
 
     def add_subject(self, group: Group) -> None:
+        """Set the email subject based on the transaction date range."""
         min_date = group.get_oldest_transaction()
         max_date = group.get_newest_transaction()
         self.subject = f"Transactions Summary: {min_date.strftime('%m/%d/%y')} - {max_date.strftime('%m/%d/%y')}"
 
     def send(self) -> None:
+        """Send the email using Azure Communication Services."""
         # Fetch Endpoint from environment variable (Managed Identity used implicitly)
         endpoint = os.environ.get("COMMUNICATION_SERVICES_ENDPOINT")
         if not endpoint:
