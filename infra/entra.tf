@@ -27,7 +27,7 @@ resource "azuread_application_redirect_uris" "swa_callback" {
   type           = "Web"
 
   redirect_uris = [
-    "https://${azurerm_static_site.web.default_host_name}/.auth/login/aad/callback"
+    "https://${azurerm_static_web_app.web.default_host_name}/.auth/login/aad/callback"
   ]
 }
 

@@ -1,4 +1,4 @@
-resource "azurerm_static_site" "web" {
+resource "azurerm_static_web_app" "web" {
   name                = "${var.project_name}-web-${local.resource_suffix}"
   resource_group_name = azurerm_resource_group.rg.name
   location            = var.swa_location
@@ -11,13 +11,13 @@ resource "azurerm_static_site" "web" {
   }
 }
 
-resource "azurerm_static_site_linked_backend" "backend" {
-  static_site_id  = azurerm_static_site.web.id
-  backend_resource_id = azurerm_linux_function_app.app.id
+resource "azurerm_static_web_app_function_app_registration" "backend" {
+  static_web_app_id = azurerm_static_web_app.web.id
+  function_app_id   = azurerm_linux_function_app.app.id
 }
 
 output "static_web_app_url" {
-  value = azurerm_static_site.web.default_host_name
+  value = azurerm_static_web_app.web.default_host_name
 }
 
 output "function_app_name" {
