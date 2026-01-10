@@ -12,6 +12,10 @@ resource "cloudflare_zone_dnssec" "main_zone_dnssec" {
   dnssec_presigned    = false
   dnssec_use_nsec3    = false
   status              = "active"
+
+  lifecycle {
+    ignore_changes = all
+  }
 }
 
 resource "cloudflare_dns_record" "azure_verification_txt" {
