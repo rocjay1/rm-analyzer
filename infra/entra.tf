@@ -6,13 +6,13 @@ resource "azuread_application_registration" "frontend_app" {
   sign_in_audience = "AzureADMyOrg" # Restrict to this tenant only
 
   implicit_access_token_issuance_enabled = false
-  implicit_id_token_issuance_enabled     = false
+  implicit_id_token_issuance_enabled     = true
 }
 
 # Service Principal (Enterprise App)
 resource "azuread_service_principal" "frontend_sp" {
   client_id                    = azuread_application_registration.frontend_app.client_id
-  app_role_assignment_required = true # STRICT: User assignment required
+  app_role_assignment_required = true
 }
 
 # Client Secret for the App
