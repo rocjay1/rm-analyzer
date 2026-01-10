@@ -41,7 +41,6 @@ resource "azurerm_function_app_flex_consumption" "app" {
     "AzureWebJobsStorage__credential"        = "managedidentity"
     "DEPLOYMENT_STORAGE_AUTHENTICATION_TYPE" = "SystemAssignedIdentity"
     "DEPLOYMENT_STORAGE_ACCOUNT_NAME"        = azurerm_storage_account.sa.name
-    "FUNCTIONS_WORKER_RUNTIME"               = "python"
     "RM_ANALYZER_STORAGE_ACCOUNT_URL"        = azurerm_storage_account.sa.primary_blob_endpoint
     # robustly extract endpoint from connection string to avoid region hardcoding
     "COMMUNICATION_SERVICES_ENDPOINT" = replace(regex("endpoint=[^;]+", azurerm_communication_service.comm_svc.primary_connection_string), "endpoint=", "")
