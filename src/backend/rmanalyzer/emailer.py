@@ -1,16 +1,21 @@
 """
 SummaryEmail class for RMAnalyzer.
 """
+
 import os
+
 import yattag
-from .models import Group, Category
-from .transactions import to_currency
+
 from .azure_utils import send_email
+from .models import Category, Group
+from .transactions import to_currency
 
 __all__ = ["SummaryEmail"]
 
+
 class SummaryEmail:
     """Formats and sends a summary email for a group of people."""
+
     def __init__(self, sender: str, to: list[str]) -> None:
         self.sender = sender
         self.to = to
@@ -55,9 +60,17 @@ class SummaryEmail:
                                     text("Difference")
                                 for c in Category:
                                     with tag("td"):
-                                        text(to_currency(group.get_expenses_difference(p1, p2, c)))
+                                        text(
+                                            to_currency(
+                                                group.get_expenses_difference(p1, p2, c)
+                                            )
+                                        )
                                 with tag("td"):
-                                    text(to_currency(group.get_expenses_difference(p1, p2)))
+                                    text(
+                                        to_currency(
+                                            group.get_expenses_difference(p1, p2)
+                                        )
+                                    )
                 if len(group.members) == 2:
                     p1, p2 = group.members
                     scale = 0.445
