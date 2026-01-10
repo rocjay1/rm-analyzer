@@ -38,7 +38,9 @@ def get_members(people_config: list[dict]) -> list[Person]:
     return [Person(p["Name"], p["Email"], p["Accounts"], []) for p in people_config]
 
 
-def _get_uploaded_file_content(req: func.HttpRequest) -> Tuple[str, Optional[func.HttpResponse]]:
+def _get_uploaded_file_content(
+    req: func.HttpRequest,
+) -> Tuple[str, Optional[func.HttpResponse]]:
     """Helper to extract and validate uploaded file content."""
     if not req.files:
         return "", func.HttpResponse("No file found in request.", status_code=400)
@@ -118,7 +120,9 @@ def upload_and_analyze(req: func.HttpRequest) -> func.HttpResponse:
         email.add_subject(group)
         email.send()
 
-        return func.HttpResponse("Analysis complete. Summary email sent.", status_code=200)
+        return func.HttpResponse(
+            "Analysis complete. Summary email sent.", status_code=200
+        )
 
     except Exception as e:
         logging.error("Error during immediate processing: %s", e)
