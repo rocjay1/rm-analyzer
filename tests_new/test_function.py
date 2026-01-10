@@ -71,7 +71,8 @@ class TestFunctionApp(unittest.TestCase):
 
         # Mock transaction that matches the person's account (123) and is not ignored
         t = Transaction(date(2025, 8, 17), "Test", 123, 42.5, Category.DINING, IgnoredFrom.NOTHING)
-        mock_get_trans.return_value = [t]
+        # Mock return value of get_transactions to return (transactions, errors) tuple
+        mock_get_trans.return_value = ([t], [])
 
         resp = upload_and_analyze(self.req)
 
@@ -81,13 +82,8 @@ class TestFunctionApp(unittest.TestCase):
         # Verify caching by calling again
         resp2 = upload_and_analyze(self.req)
         self.assertEqual(resp2.status_code, 200)
-        # Should NOT call json.load again if cached.
-        # However, setUp resets cache, so we need to check in same test.
-        # But wait, setUp runs before each test. I need to run calling twice in one test method.
-        # I just did that.
 
         # json.load should have been called ONCE.
-        # Because the first call populated cache.
         self.assertEqual(mock_json_load.call_count, 1)
 
 if __name__ == "__main__":

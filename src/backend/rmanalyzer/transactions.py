@@ -1,24 +1,72 @@
 from datetime import datetime
 import csv
-from typing import Optional, List
+from typing import Optional, List, Tuple
 from .models import Transaction, Category, IgnoredFrom
 
 __all__ = ["to_transaction", "get_transactions", "to_currency"]
 
-DATE = "%Y-%m-%d"
 MONEY_FORMAT = "{0:.2f}"
 
-def to_transaction(row: dict) -> Optional[Transaction]:
+# Supported date formats
+DATE_FORMATS = [
+    "%Y-%m-%d",
+    "%m/%d/%Y",
+    "%d/%m/%Y",
+    "%Y/%m/%d"
+]
+
+def parse_date(date_str: str) -> Optional[datetime.date]:
+    for fmt in DATE_FORMATS:
+        try:
+            return datetime.strptime(date_str, fmt).date()
+        except ValueError:
+            continue
+    raise ValueError(f"Date '{date_str}' does not match any supported format.")
+
+def to_transaction(row: dict) -> Tuple[Optional[Transaction], Optional[str]]:
+    """
+    Parses a CSV row into a Transaction object.
+    Returns (Transaction, None) if successful, or (None, error_message) if not.
+    """
     try:
         # Normalize keys and values
         clean_row = {k.strip(): v.strip() for k, v in row.items() if k}
 
-        transaction_date = datetime.strptime(clean_row["Date"], DATE).date()
-        transaction_name = str(clean_row["Name"])
-        transaction_account_number = int(clean_row["Account Number"])
-        transaction_amount = float(clean_row["Amount"])
-        transaction_category = Category(clean_row["Category"])
-        transaction_ignore = IgnoredFrom(clean_row["Ignored From"])
+        if "Date" not in clean_row:
+            return None, "Missing 'Date' field"
+
+        try:
+            transaction_date = parse_date(clean_row["Date"])
+        except ValueError as e:
+            return None, str(e)
+
+        try:
+            transaction_name = str(clean_row["Name"])
+        except KeyError:
+             return None, "Missing 'Name' field"
+
+        try:
+            transaction_account_number = int(clean_row["Account Number"])
+        except (ValueError, KeyError):
+            return None, f"Invalid or missing 'Account Number': {clean_row.get('Account Number')}"
+
+        try:
+            transaction_amount = float(clean_row["Amount"])
+        except (ValueError, KeyError):
+            return None, f"Invalid or missing 'Amount': {clean_row.get('Amount')}"
+
+        try:
+            transaction_category = Category(clean_row["Category"])
+        except (ValueError, KeyError):
+             return None, f"Invalid or missing 'Category': {clean_row.get('Category')}. Valid categories: {', '.join([c.value for c in Category])}"
+
+        try:
+            # Handle empty string for NOTHING
+            ignored_from_val = clean_row.get("Ignored From", "")
+            transaction_ignore = IgnoredFrom(ignored_from_val)
+        except ValueError:
+            return None, f"Invalid 'Ignored From' value: {clean_row.get('Ignored From')}"
+
         return Transaction(
             transaction_date,
             transaction_name,
@@ -26,25 +74,33 @@ def to_transaction(row: dict) -> Optional[Transaction]:
             transaction_amount,
             transaction_category,
             transaction_ignore,
-        )
-    except (ValueError, KeyError, AttributeError):
-        return None
+        ), None
 
-def get_transactions(content: str) -> List[Transaction]:
-    # Filter out empty lines before parsing
+    except Exception as e:
+        return None, f"Unexpected error parsing row: {str(e)}"
+
+def get_transactions(content: str) -> Tuple[List[Transaction], List[str]]:
+    """
+    Parses CSV content into a list of Transactions.
+    Returns (List[Transaction], List[str]) where the second list contains error messages.
+    """
     lines = [line for line in content.splitlines() if line.strip()]
     rows = csv.DictReader(lines)
     transactions = []
+    errors = []
 
     # Handle case where fieldnames might have whitespace
     if rows.fieldnames:
         rows.fieldnames = [name.strip() for name in rows.fieldnames]
 
-    for row in rows:
-        transaction = to_transaction(row)
+    for i, row in enumerate(rows, start=1):
+        transaction, error = to_transaction(row)
         if transaction:
             transactions.append(transaction)
-    return transactions
+        else:
+            errors.append(f"Row {i}: {error}")
+
+    return transactions, errors
 
 def to_currency(num: float) -> str:
     return MONEY_FORMAT.format(num)
