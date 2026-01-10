@@ -100,6 +100,7 @@ class Group:
                 if (
                     t.account_number in p.account_numbers
                     and t.ignore == IgnoredFrom.NOTHING
+                    and t.category != Category.OTHER
                 ):
                     p.add_transaction(t)
 

@@ -23,6 +23,7 @@ class SummaryEmail:
         self.body = str()
 
     def add_body(self, group: Group) -> None:
+        tracked_categories = [c for c in Category if c != Category.OTHER]
         doc, tag, text = yattag.Doc().tagtext()
         doc.asis("<!DOCTYPE html>")
         with tag("html"):
@@ -38,7 +39,7 @@ class SummaryEmail:
                         with tag("tr"):
                             with tag("th"):
                                 text("")
-                            for c in Category:
+                            for c in tracked_categories:
                                 with tag("th"):
                                     text(c.value)
                             with tag("th"):
@@ -48,7 +49,7 @@ class SummaryEmail:
                             with tag("tr"):
                                 with tag("td"):
                                     text(p.name)
-                                for c in Category:
+                                for c in tracked_categories:
                                     with tag("td"):
                                         text(to_currency(p.get_expenses(c)))
                                 with tag("td"):
@@ -58,7 +59,7 @@ class SummaryEmail:
                             with tag("tr"):
                                 with tag("td"):
                                     text("Difference")
-                                for c in Category:
+                                for c in tracked_categories:
                                     with tag("td"):
                                         text(
                                             to_currency(
