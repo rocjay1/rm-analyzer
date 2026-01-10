@@ -19,7 +19,7 @@ resource "azurerm_email_communication_service_domain" "domain" {
 }
 
 resource "time_sleep" "wait_for_dns" {
-  create_duration = "60s"
+  create_duration = "300s"
 
   depends_on = [
     cloudflare_dns_record.azure_verification_txt,
