@@ -29,7 +29,18 @@ def send_email(endpoint: str, sender: str, to: list[str], subject: str, body: st
 
         poller = email_client.begin_send(message)
         result = poller.result()
-        logger.info("Email sent with message ID: %s", result["messageId"])
+
+        # Extract message ID (result might be dict or object)
+        message_id = None
+        if isinstance(result, dict):
+            message_id = result.get("messageId") or result.get("message_id") or result.get("id")
+        else:
+            message_id = getattr(result, "message_id", None) or getattr(result, "id", None)
+
+        if message_id:
+            logger.info("Email sent with message ID: %s", message_id)
+        else:
+            logger.info("Email sent successfully")
 
     except Exception as ex:
         logger.error("Error sending email: %s", ex)
