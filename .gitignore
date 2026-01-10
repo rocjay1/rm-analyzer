@@ -28,3 +28,4 @@ local.settings.json
 node_modules/
 dist/
 .swa/
+/src/backend/config.json
