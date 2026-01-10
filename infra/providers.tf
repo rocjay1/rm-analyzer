@@ -16,6 +16,14 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "~> 5.12"
     }
+    azapi = {
+      source  = "azure/azapi"
+      version = "~> 1.13"
+    }
+    time = {
+      source  = "hashicorp/time"
+      version = "~> 0.11"
+    }
   }
 }
 
@@ -26,6 +34,8 @@ provider "azurerm" {
 }
 
 provider "azuread" {}
+
+provider "azapi" {}
 
 provider "cloudflare" {
   api_token = var.cloudflare_api_token
