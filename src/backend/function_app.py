@@ -13,6 +13,9 @@ app = func.FunctionApp()
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
 _CONFIG_CACHE = None
 
+# Limit file size to 10MB to prevent DoS
+MAX_FILE_SIZE = 10 * 1024 * 1024
+
 def get_config() -> dict:
     """Load and validate configuration, using cache if available."""
     global _CONFIG_CACHE
@@ -60,7 +63,20 @@ def upload_and_analyze(req: func.HttpRequest) -> func.HttpResponse:
         file_key = list(req.files.keys())[0]
         uploaded_file = req.files[file_key]
         filename = uploaded_file.filename
-        csv_content = uploaded_file.stream.read().decode("utf-8")
+
+        # Security: Check file content length if available, though stream reading is better
+        # We read into memory, so strict limit is needed.
+        # However, req.files wraps werkzeug/builtin storage.
+        # reading stream allows checking size.
+
+        file_content = uploaded_file.stream.read(MAX_FILE_SIZE + 1)
+        if len(file_content) > MAX_FILE_SIZE:
+             return func.HttpResponse(f"File too large. Maximum size is {MAX_FILE_SIZE/1024/1024}MB.", status_code=413)
+
+        try:
+            csv_content = file_content.decode("utf-8")
+        except UnicodeDecodeError:
+             return func.HttpResponse("Invalid file encoding. Please upload a valid UTF-8 CSV.", status_code=400)
 
         # 2. Load Local Configuration
         try:
@@ -69,13 +85,21 @@ def upload_and_analyze(req: func.HttpRequest) -> func.HttpResponse:
             return func.HttpResponse("Configuration file not found on server.", status_code=500)
 
         # 3. Run Analysis
-        transactions = get_transactions(csv_content)
+        transactions, errors = get_transactions(csv_content)
+
+        if errors:
+            # If there are parsing errors, we abort and return them to the user.
+            error_msg = "CSV Validation Errors:\n" + "\n".join(errors[:20]) # Limit output
+            if len(errors) > 20:
+                error_msg += f"\n... and {len(errors) - 20} more errors."
+            return func.HttpResponse(error_msg, status_code=400)
+
         members = get_members(config["People"])
         group = Group(members)
         group.add_transactions(transactions)
 
         if not any(p.transactions for p in group.members):
-            return func.HttpResponse(
+             return func.HttpResponse(
                 "No valid transactions found in the file for configured accounts.",
                 status_code=400
             )

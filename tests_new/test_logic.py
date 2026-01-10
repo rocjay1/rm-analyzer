@@ -21,8 +21,9 @@ class TestTransactionHelpers(unittest.TestCase):
             "Category": "Dining & Drinks",
             "Ignored From": "everything"
         }
-        t = to_transaction(row)
+        t, err = to_transaction(row)
         self.assertIsInstance(t, Transaction)
+        self.assertIsNone(err)
         self.assertEqual(t.name, "Test")
         self.assertEqual(t.account_number, 123)
         self.assertEqual(t.amount, 42.5)
@@ -42,8 +43,9 @@ class TestTransactionHelpers(unittest.TestCase):
         # Note: keys are usually cleaned by DictReader if configured,
         # but here we test to_transaction direct usage
         # Since to_transaction cleans keys too now:
-        t = to_transaction(row)
+        t, err = to_transaction(row)
         self.assertIsInstance(t, Transaction)
+        self.assertIsNone(err)
         self.assertEqual(t.date, date(2025, 8, 17))
 
     def test_to_transaction_invalid(self):
@@ -56,8 +58,10 @@ class TestTransactionHelpers(unittest.TestCase):
             "Category": "bad",
             "Ignored From": "bad"
         }
-        t = to_transaction(row)
+        t, err = to_transaction(row)
         self.assertIsNone(t)
+        self.assertIsNotNone(err)
+        self.assertTrue("bad-date" in err or "Date" in err)
 
     def test_to_currency(self):
         """Test currency formatting."""
@@ -74,8 +78,9 @@ class TestTransactionHelpers(unittest.TestCase):
             "\n"
             "2025-08-18,Test2,123,10.0,Groceries,\n"
         )
-        transactions = get_transactions(csv_content)
+        transactions, errors = get_transactions(csv_content)
         self.assertEqual(len(transactions), 2)
+        self.assertEqual(len(errors), 0)
         self.assertEqual(transactions[0].name, "Test")
         self.assertEqual(transactions[1].name, "Test2")
 
@@ -85,10 +90,22 @@ class TestTransactionHelpers(unittest.TestCase):
             " Date , Name , Account Number , Amount , Category , Ignored From\n"
             "2025-08-17,Test,123,42.5,Dining & Drinks,everything\n"
         )
-        transactions = get_transactions(csv_content)
+        transactions, errors = get_transactions(csv_content)
         self.assertEqual(len(transactions), 1)
+        self.assertEqual(len(errors), 0)
         self.assertEqual(transactions[0].name, "Test")
 
+    def test_get_transactions_with_errors(self):
+        """Test parsing CSV with mixed valid and invalid rows."""
+        csv_content = (
+            "Date,Name,Account Number,Amount,Category,Ignored From\n"
+            "2025-08-17,Test,123,42.5,Dining & Drinks,everything\n"
+            "bad-date,Bad,123,10.0,Groceries,\n"
+        )
+        transactions, errors = get_transactions(csv_content)
+        self.assertEqual(len(transactions), 1)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("Row 2", errors[0])
 
 class TestPersonGroup(unittest.TestCase):
     """Test suite for Person and Group models."""
