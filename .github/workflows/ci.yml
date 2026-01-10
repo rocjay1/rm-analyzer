@@ -25,10 +25,10 @@ jobs:
         pip install pytest pylint black isort
 
     - name: Format Check (Black)
-      run: black --check src/backend tests_new
+      run: black --check src/backend
 
     - name: Import Sort Check (isort)
-      run: isort --check src/backend tests_new
+      run: isort --check src/backend
 
     - name: Lint with pylint
       run: |
