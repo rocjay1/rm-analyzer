@@ -1,11 +1,13 @@
 """
 Tests for the business logic (models and transactions).
 """
+
 import unittest
 from datetime import date
 
-from rmanalyzer.models import Transaction, Category, IgnoredFrom, Person, Group
-from rmanalyzer.transactions import to_transaction, to_currency, get_transactions
+from rmanalyzer.models import Category, Group, IgnoredFrom, Person, Transaction
+from rmanalyzer.transactions import (get_transactions, to_currency,
+                                     to_transaction)
 
 
 class TestTransactionHelpers(unittest.TestCase):
@@ -19,7 +21,7 @@ class TestTransactionHelpers(unittest.TestCase):
             "Account Number": "123",
             "Amount": "42.5",
             "Category": "Dining & Drinks",
-            "Ignored From": "everything"
+            "Ignored From": "everything",
         }
         t, err = to_transaction(row)
         self.assertIsInstance(t, Transaction)
@@ -38,7 +40,7 @@ class TestTransactionHelpers(unittest.TestCase):
             "Account Number": "123",
             "Amount": "42.5",
             "Category": "Dining & Drinks",
-            "Ignored From": "everything"
+            "Ignored From": "everything",
         }
         # Note: keys are usually cleaned by DictReader if configured,
         # but here we test to_transaction direct usage
@@ -56,7 +58,7 @@ class TestTransactionHelpers(unittest.TestCase):
             "Account Number": "abc",
             "Amount": "bad",
             "Category": "bad",
-            "Ignored From": "bad"
+            "Ignored From": "bad",
         }
         t, err = to_transaction(row)
         self.assertIsNone(t)
@@ -107,6 +109,7 @@ class TestTransactionHelpers(unittest.TestCase):
         self.assertEqual(len(errors), 1)
         self.assertIn("Row 2", errors[0])
 
+
 class TestPersonGroup(unittest.TestCase):
     """Test suite for Person and Group models."""
 
@@ -142,9 +145,12 @@ class TestPersonGroup(unittest.TestCase):
 
     def test_group_add_transactions(self):
         """Test adding transactions to a group."""
-        t4 = Transaction(date(2025, 8, 4), "D", 1, 5.0, Category.DINING, IgnoredFrom.NOTHING)
+        t4 = Transaction(
+            date(2025, 8, 4), "D", 1, 5.0, Category.DINING, IgnoredFrom.NOTHING
+        )
         self.group.add_transactions([t4])
         self.assertIn(t4, self.p1.transactions)
+
 
 if __name__ == "__main__":
     unittest.main()

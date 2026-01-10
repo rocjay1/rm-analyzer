@@ -1,10 +1,12 @@
 import json
 import logging
-from typeguard import check_type, TypeCheckError
+
+from typeguard import TypeCheckError, check_type
 
 __all__ = ["validate_config", "get_config_from_str"]
 
 logger = logging.getLogger(__name__)
+
 
 def validate_config(config: dict) -> None:
     try:
@@ -18,6 +20,7 @@ def validate_config(config: dict) -> None:
     except (KeyError, TypeCheckError) as ex:
         logger.error("Invalid configuration: %s", ex)
         raise
+
 
 def get_config_from_str(config_str: str) -> dict:
     try:

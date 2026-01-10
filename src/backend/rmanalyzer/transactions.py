@@ -1,19 +1,16 @@
-from datetime import datetime
 import csv
-from typing import Optional, List, Tuple
-from .models import Transaction, Category, IgnoredFrom
+from datetime import datetime
+from typing import List, Optional, Tuple
+
+from .models import Category, IgnoredFrom, Transaction
 
 __all__ = ["to_transaction", "get_transactions", "to_currency"]
 
 MONEY_FORMAT = "{0:.2f}"
 
 # Supported date formats
-DATE_FORMATS = [
-    "%Y-%m-%d",
-    "%m/%d/%Y",
-    "%d/%m/%Y",
-    "%Y/%m/%d"
-]
+DATE_FORMATS = ["%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d"]
+
 
 def parse_date(date_str: str) -> Optional[datetime.date]:
     for fmt in DATE_FORMATS:
@@ -22,6 +19,7 @@ def parse_date(date_str: str) -> Optional[datetime.date]:
         except ValueError:
             continue
     raise ValueError(f"Date '{date_str}' does not match any supported format.")
+
 
 def to_transaction(row: dict) -> Tuple[Optional[Transaction], Optional[str]]:
     """
@@ -43,12 +41,15 @@ def to_transaction(row: dict) -> Tuple[Optional[Transaction], Optional[str]]:
         try:
             transaction_name = str(clean_row["Name"])
         except KeyError:
-             return None, "Missing 'Name' field"
+            return None, "Missing 'Name' field"
 
         try:
             transaction_account_number = int(clean_row["Account Number"])
         except (ValueError, KeyError):
-            return None, f"Invalid or missing 'Account Number': {clean_row.get('Account Number')}"
+            return (
+                None,
+                f"Invalid or missing 'Account Number': {clean_row.get('Account Number')}",
+            )
 
         try:
             transaction_amount = float(clean_row["Amount"])
@@ -58,26 +59,37 @@ def to_transaction(row: dict) -> Tuple[Optional[Transaction], Optional[str]]:
         try:
             transaction_category = Category(clean_row["Category"])
         except (ValueError, KeyError):
-             return None, f"Invalid or missing 'Category': {clean_row.get('Category')}. Valid categories: {', '.join([c.value for c in Category])}"
+            valid_cats = ", ".join([c.value for c in Category])
+            return (
+                None,
+                f"Invalid or missing 'Category': {clean_row.get('Category')}. Valid categories: {valid_cats}",
+            )
 
         try:
             # Handle empty string for NOTHING
             ignored_from_val = clean_row.get("Ignored From", "")
             transaction_ignore = IgnoredFrom(ignored_from_val)
         except ValueError:
-            return None, f"Invalid 'Ignored From' value: {clean_row.get('Ignored From')}"
+            return (
+                None,
+                f"Invalid 'Ignored From' value: {clean_row.get('Ignored From')}",
+            )
 
-        return Transaction(
-            transaction_date,
-            transaction_name,
-            transaction_account_number,
-            transaction_amount,
-            transaction_category,
-            transaction_ignore,
-        ), None
+        return (
+            Transaction(
+                transaction_date,
+                transaction_name,
+                transaction_account_number,
+                transaction_amount,
+                transaction_category,
+                transaction_ignore,
+            ),
+            None,
+        )
 
     except Exception as e:
         return None, f"Unexpected error parsing row: {str(e)}"
+
 
 def get_transactions(content: str) -> Tuple[List[Transaction], List[str]]:
     """
@@ -101,6 +113,7 @@ def get_transactions(content: str) -> Tuple[List[Transaction], List[str]]:
             errors.append(f"Row {i}: {error}")
 
     return transactions, errors
+
 
 def to_currency(num: float) -> str:
     return MONEY_FORMAT.format(num)

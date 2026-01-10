@@ -17,24 +17,24 @@
     location        = "eastus"
     ```
 
-- [ ] **Plan & Apply:**
+- [x] **Plan & Apply:**
   - [x] `terraform plan -out=main.tfplan`
-  - [ ] `terraform apply "main.tfplan"`
-- [ ] **Capture Outputs:** Note the `static_web_app_url`, `function_app_name`, and `tenant_id`.
+  - [x] `terraform apply "main.tfplan"`
+- [x] **Capture Outputs:** Note the `static_web_app_url`, `function_app_name`, and `tenant_id`.
 
 ## 3. Post-Infrastructure Manual Steps
 
-- [ ] **Email Domain Verification:**
+- [x] **Email Domain Verification:**
   - Navigate to **Communication Services** > **Email** > **Domains** in the Azure Portal.
   - Check if the `AzureManagedDomain` status is "Verified". It can take 5–15 minutes for Azure to fully provision the managed domain.
-- [ ] **Entra ID User Assignment:**
+- [x] **Entra ID User Assignment:**
   - Since `app_role_assignment_required = true` is set in `entra.tf`, you **must** manually assign users or groups to the Enterprise Application.
   - Go to **Microsoft Entra ID** > **Enterprise applications** > Search for `rmanalyzer-frontend`.
   - Select **Users and groups** > **Add user/group** and add yourself to gain login access.
 
 ## 4. Application Code Deployment
 
-- [ ] **Backend (Azure Functions):**
+- [x] **Backend (Azure Functions):**
   - Install [Azure Functions Core Tools](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local).
   - Run from the root:
 
@@ -43,7 +43,7 @@
       func azure functionapp publish <YOUR_FUNCTION_APP_NAME_FROM_TERRAFORM>
       ```
 
-- [ ] **Frontend (Static Web App):**
+- [x] **Frontend (Static Web App):**
   - The easiest way is using the [SWA CLI](https://azure.github.io/static-web-apps-cli/):
 
       ```bash
@@ -55,11 +55,11 @@
 
 ## 5. Security & Connectivity Verification
 
-- [ ] **Verify SWA Linkage:** In the portal, go to your **Static Web App** > **APIs**. Ensure your Function App appears as a "Linked" backend.
-- [ ] **Test Direct Access (Defense Check):**
+- [x] **Verify SWA Linkage:** In the portal, go to your **Static Web App** > **APIs**. Ensure your Function App appears as a "Linked" backend.
+- [x] **Test Direct Access (Defense Check):**
   - Try to access `https://<YOUR-FUNC>.azurewebsites.net/api/heartbeat`.
   - It should return **401 Unauthorized** because only requests proxied via SWA are allowed.
-- [ ] **End-to-End Test:**
+- [x] **End-to-End Test:**
   - Navigate to the `static_web_app_url`.
   - Login via Entra ID (verify the redirect to `/.auth/login/aad/callback` works).
   - Perform a transaction analysis to ensure the frontend can call the backend.

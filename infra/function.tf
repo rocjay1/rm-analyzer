@@ -29,7 +29,9 @@ resource "azurerm_function_app_flex_consumption" "app" {
   lifecycle {
     ignore_changes = [
       tags,
-      auth_settings_v2
+      auth_settings_v2,
+      app_settings,
+      site_config
     ]
   }
 
