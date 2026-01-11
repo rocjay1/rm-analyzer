@@ -10,8 +10,6 @@ from .models import Category, IgnoredFrom, Transaction
 
 __all__ = ["to_transaction", "get_transactions", "to_currency"]
 
-MONEY_FORMAT = "{0:.2f}"
-
 # Supported date formats
 DATE_FORMATS = ["%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d"]
 
@@ -34,63 +32,63 @@ def to_transaction(row: dict) -> Tuple[Optional[Transaction], Optional[str]]:
     try:
         # Normalize keys and values
         clean_row = {k.strip(): v.strip() for k, v in row.items() if k}
-
-        if "Date" not in clean_row:
-            return None, "Missing 'Date' field"
-
-        try:
-            transaction_date = parse_date(clean_row["Date"])
-        except ValueError as e:
-            return None, str(e)
-
-        try:
-            transaction_name = str(clean_row["Name"])
-        except KeyError:
-            return None, "Missing 'Name' field"
-
-        try:
-            transaction_account_number = int(clean_row["Account Number"])
-        except (ValueError, KeyError):
-            return (
-                None,
-                f"Invalid or missing 'Account Number': {clean_row.get('Account Number')}",
-            )
-
-        try:
-            transaction_amount = float(clean_row["Amount"])
-        except (ValueError, KeyError):
-            return None, f"Invalid or missing 'Amount': {clean_row.get('Amount')}"
-
-        try:
-            transaction_category = Category(clean_row["Category"])
-        except (ValueError, KeyError):
-            # Treat unknown categories as OTHER
-            transaction_category = Category.OTHER
-
-        try:
-            # Handle empty string for NOTHING
-            ignored_from_val = clean_row.get("Ignored From", "")
-            transaction_ignore = IgnoredFrom(ignored_from_val)
-        except ValueError:
-            return (
-                None,
-                f"Invalid 'Ignored From' value: {clean_row.get('Ignored From')}",
-            )
-
-        return (
-            Transaction(
-                transaction_date,
-                transaction_name,
-                transaction_account_number,
-                transaction_amount,
-                transaction_category,
-                transaction_ignore,
-            ),
-            None,
-        )
-
     except Exception as e:
         return None, f"Unexpected error parsing row: {str(e)}"
+
+    # Required fields
+    if "Date" not in clean_row:
+        return None, "Missing 'Date' field"
+
+    try:
+        transaction_date = parse_date(clean_row["Date"])
+    except ValueError as e:
+        return None, str(e)
+
+    if "Name" not in clean_row:
+        return None, "Missing 'Name' field"
+    transaction_name = str(clean_row["Name"])
+
+    try:
+        transaction_account_number = int(clean_row["Account Number"])
+    except (ValueError, KeyError):
+        return (
+            None,
+            f"Invalid or missing 'Account Number': {clean_row.get('Account Number')}",
+        )
+
+    try:
+        transaction_amount = float(clean_row["Amount"])
+    except (ValueError, KeyError):
+        return None, f"Invalid or missing 'Amount': {clean_row.get('Amount')}"
+
+    # Optional / Defaulted fields
+    try:
+        transaction_category = Category(clean_row.get("Category"))
+    except (ValueError, KeyError):
+        # Treat unknown categories as OTHER
+        transaction_category = Category.OTHER
+
+    try:
+        # Handle empty string for NOTHING
+        ignored_from_val = clean_row.get("Ignored From", "")
+        transaction_ignore = IgnoredFrom(ignored_from_val)
+    except ValueError:
+        return (
+            None,
+            f"Invalid 'Ignored From' value: {clean_row.get('Ignored From')}",
+        )
+
+    return (
+        Transaction(
+            transaction_date,
+            transaction_name,
+            transaction_account_number,
+            transaction_amount,
+            transaction_category,
+            transaction_ignore,
+        ),
+        None,
+    )
 
 
 def get_transactions(content: str) -> Tuple[List[Transaction], List[str]]:
@@ -119,4 +117,4 @@ def get_transactions(content: str) -> Tuple[List[Transaction], List[str]]:
 
 def to_currency(num: float) -> str:
     """Format a number as a currency string."""
-    return MONEY_FORMAT.format(num)
+    return f"{num:.2f}"
