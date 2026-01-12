@@ -29,47 +29,49 @@ def to_transaction(row: dict) -> Tuple[Optional[Transaction], Optional[str]]:
     Parses a CSV row into a Transaction object.
     Returns (Transaction, None) if successful, or (None, error_message) if not.
     """
+    # Normalize keys and values
     try:
-        # Normalize keys and values
         clean_row = {k.strip(): v.strip() for k, v in row.items() if k}
-    except Exception as e:
-        return None, f"Unexpected error parsing row: {str(e)}"
+    except AttributeError:
+        return None, "Unexpected error: row is not a valid dictionary"
 
-    # Required fields
+    # 1. Date
     if "Date" not in clean_row:
         return None, "Missing 'Date' field"
-
     try:
         transaction_date = parse_date(clean_row["Date"])
     except ValueError as e:
         return None, str(e)
 
+    # 2. Name
     if "Name" not in clean_row:
         return None, "Missing 'Name' field"
-    transaction_name = str(clean_row["Name"])
+    transaction_name = clean_row["Name"]
 
+    # 3. Account Number
     try:
-        transaction_account_number = int(clean_row["Account Number"])
-    except (ValueError, KeyError):
+        transaction_account_number = int(clean_row.get("Account Number", ""))
+    except ValueError:
         return (
             None,
             f"Invalid or missing 'Account Number': {clean_row.get('Account Number')}",
         )
 
+    # 4. Amount
     try:
-        transaction_amount = float(clean_row["Amount"])
-    except (ValueError, KeyError):
+        transaction_amount = float(clean_row.get("Amount", ""))
+    except ValueError:
         return None, f"Invalid or missing 'Amount': {clean_row.get('Amount')}"
 
-    # Optional / Defaulted fields
+    # 5. Category (Optional)
     try:
         transaction_category = Category(clean_row.get("Category"))
-    except (ValueError, KeyError):
+    except ValueError:
         # Treat unknown categories as OTHER
         transaction_category = Category.OTHER
 
+    # 6. Ignored From (Optional)
     try:
-        # Handle empty string for NOTHING
         ignored_from_val = clean_row.get("Ignored From", "")
         transaction_ignore = IgnoredFrom(ignored_from_val)
     except ValueError:
