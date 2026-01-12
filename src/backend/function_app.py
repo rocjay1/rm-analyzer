@@ -28,22 +28,21 @@ def get_config() -> dict:
     if _CONFIG_CACHE:
         return _CONFIG_CACHE
 
+    config = None
     # 1. Try Environment Variable (Production)
     env_config = os.environ.get("APP_CONFIG_JSON")
     if env_config:
         config = get_config_from_str(env_config)
-        validate_config(config)
-        _CONFIG_CACHE = config
-        return config
+    elif os.path.exists(CONFIG_PATH):
+        # 2. Try File (Local Dev)
+        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+            config = json.load(f)
 
-    # 2. Try File (Local Dev)
-    if not os.path.exists(CONFIG_PATH):
+    if config is None:
         raise FileNotFoundError(
             "Configuration file not found on server (and APP_CONFIG_JSON not set)."
         )
 
-    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-        config = json.load(f)
     validate_config(config)
     _CONFIG_CACHE = config
     return config

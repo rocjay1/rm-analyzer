@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Deploy Frontend (SWA)
     environment: production
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       
@@ -33,6 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Deploy Backend (Function App)
     environment: production
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
