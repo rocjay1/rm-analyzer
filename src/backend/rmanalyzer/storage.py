@@ -5,7 +5,7 @@ Storage helper for saving/loading data from Azure Blob Storage.
 import json
 import logging
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
