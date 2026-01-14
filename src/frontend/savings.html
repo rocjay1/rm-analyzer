@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Savings Calculator - RM Analyzer</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .container { border: 1px solid #ccc; padding: 20px; border-radius: 8px; }
+        .btn { background-color: #0078d4; color: white; padding: 10px 20px; border: none; cursor: pointer; border-radius: 4px; }
+        .btn:disabled { background-color: #ccc; }
+        .btn-secondary { background-color: #e0e0e0; color: #333; }
+        .btn-danger { background-color: #d13438; color: white; padding: 5px 10px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        input[type="number"], input[type="text"] { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
+        .result-box { background-color: #f3f2f1; padding: 20px; border-radius: 8px; margin-top: 20px; font-size: 1.2em; font-weight: bold; text-align: right; }
+        .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .back-link { text-decoration: none; color: #0078d4; margin-bottom: 20px; display: inline-block; }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-link">← Back to Home</a>
+    
+    <div class="header-row">
+        <h1>Savings Calculator</h1>
+        <div id="user-info"></div>
+    </div>
+
+    <div class="container">
+        <div style="margin-bottom: 20px;">
+            <label for="startingBalance" style="font-weight: bold; display: block; margin-bottom: 8px;">Starting Balance ($)</label>
+            <input type="number" id="startingBalance" step="0.01" placeholder="0.00">
+        </div>
+
+        <h3>Monthly Adjustments</h3>
+        <table id="costsTable">
+            <thead>
+                <tr>
+                    <th style="width: 40%">Item</th>
+                    <th style="width: 30%">Amount ($)</th>
+                    <th style="width: 10%">Action</th>
+                </tr>
+            </thead>
+            <tbody id="costsBody">
+                <!-- Rows will be added here -->
+            </tbody>
+        </table>
+
+        <button class="btn btn-secondary" onclick="addRow()">+ Add Item</button>
+        
+        <div class="result-box">
+            Savings Transfer: <span id="transferAmount" style="color: #0078d4;">$0.00</span>
+        </div>
+
+        <div style="margin-top: 30px; text-align: right;">
+            <span id="status" style="margin-right: 15px; font-size: 0.9em; color: #666;"></span>
+            <button class="btn" id="saveBtn" onclick="saveData()">Save Changes</button>
+        </div>
+    </div>
+
+    <script src="savings.js"></script>
+</body>
+</html>

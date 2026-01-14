@@ -12,6 +12,7 @@ from rmanalyzer.config import get_config_from_str, validate_config
 from rmanalyzer.emailer import SummaryEmail
 from rmanalyzer.models import Group, Person
 from rmanalyzer.transactions import get_transactions
+from rmanalyzer.storage import load_savings_data, save_savings_data
 
 app = func.FunctionApp()
 
@@ -143,3 +144,46 @@ def upload_and_analyze(req: func.HttpRequest) -> func.HttpResponse:
     except Exception as e:
         logging.error("Error during immediate processing: %s", e)
         return func.HttpResponse(f"Processing Error: {str(e)}", status_code=500)
+
+
+@app.route(route="savings", methods=["GET", "POST"], auth_level=func.AuthLevel.ANONYMOUS)
+def savings_handler(req: func.HttpRequest) -> func.HttpResponse:
+    """Handles getting and updating savings calculation data."""
+    logging.info("Processing savings request.")
+
+    # Security check: Ensure the request is coming via Static Web App Authentication
+    # (Optional: you might want to uncomment this for production security)
+    # client_principal = req.headers.get("x-ms-client-principal")
+    # if not client_principal:
+    #     return func.HttpResponse(
+    #         "Unauthorized: Requests must be authenticated via Static Web App.",
+    #         status_code=401,
+    #     )
+
+    try:
+        if req.method == "GET":
+            data = load_savings_data()
+            return func.HttpResponse(
+                json.dumps(data), 
+                mimetype="application/json",
+                status_code=200
+            )
+
+        elif req.method == "POST":
+            try:
+                req_body = req.get_json()
+            except ValueError:
+                return func.HttpResponse("Invalid JSON", status_code=400)
+
+            # Basic validation
+            if "startingBalance" not in req_body or "items" not in req_body:
+                return func.HttpResponse("Missing required fields", status_code=400)
+
+            save_savings_data(req_body)
+            return func.HttpResponse("Saved successfully", status_code=200)
+
+    except Exception as e:
+        logging.error(f"Error in savings handler: {e}")
+        return func.HttpResponse(f"Internal Error: {str(e)}", status_code=500)
+
+    return func.HttpResponse("Method not supported", status_code=405)
