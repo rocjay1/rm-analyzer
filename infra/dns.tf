@@ -43,7 +43,7 @@ resource "cloudflare_dns_record" "azure_dkim" {
   name       = azurerm_email_communication_service_domain.domain.verification_records[0].dkim[0].name
   type       = "CNAME"
   content    = azurerm_email_communication_service_domain.domain.verification_records[0].dkim[0].value
-  proxied    = true
+  proxied    = false
   ttl        = 1
   depends_on = [azurerm_email_communication_service_domain.domain]
 }
@@ -53,7 +53,7 @@ resource "cloudflare_dns_record" "azure_dkim2" {
   name       = azurerm_email_communication_service_domain.domain.verification_records[0].dkim2[0].name
   type       = "CNAME"
   content    = azurerm_email_communication_service_domain.domain.verification_records[0].dkim2[0].value
-  proxied    = true
+  proxied    = false
   ttl        = 1
   depends_on = [azurerm_email_communication_service_domain.domain]
 }
