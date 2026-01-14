@@ -21,13 +21,17 @@ BLOB_NAME = "savings.json"
 def _get_blob_client():
     """Returns a BlobClient for the savings file, creating container if needed."""
     if not STORAGE_ACCOUNT_URL:
-        raise ValueError("RM_ANALYZER_STORAGE_ACCOUNT_URL environment variable is not set.")
+        raise ValueError(
+            "RM_ANALYZER_STORAGE_ACCOUNT_URL environment variable is not set."
+        )
 
     # Use Managed Identity credential
     credential = DefaultAzureCredential()
-    
-    blob_service_client = BlobServiceClient(account_url=STORAGE_ACCOUNT_URL, credential=credential)
-    
+
+    blob_service_client = BlobServiceClient(
+        account_url=STORAGE_ACCOUNT_URL, credential=credential
+    )
+
     # Ensure container exists
     container_client = blob_service_client.get_container_client(CONTAINER_NAME)
     if not container_client.exists():
@@ -42,16 +46,13 @@ def _get_blob_client():
 
 def load_savings_data() -> Dict[str, Any]:
     """Loads savings data from blob storage. Returns empty structure if not found."""
-    default_data = {
-        "startingBalance": 0,
-        "items": []
-    }
+    default_data = {"startingBalance": 0, "items": []}
 
     try:
         blob = _get_blob_client()
         if not blob.exists():
             return default_data
-        
+
         download_stream = blob.download_blob()
         content = download_stream.readall()
         return json.loads(content)
