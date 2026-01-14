@@ -168,7 +168,7 @@ def savings_handler(req: func.HttpRequest) -> func.HttpResponse:
                 json.dumps(data), mimetype="application/json", status_code=200
             )
 
-        elif req.method == "POST":
+        if req.method == "POST":
             try:
                 req_body = req.get_json()
             except ValueError:
