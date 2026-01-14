@@ -146,7 +146,9 @@ def upload_and_analyze(req: func.HttpRequest) -> func.HttpResponse:
         return func.HttpResponse(f"Processing Error: {str(e)}", status_code=500)
 
 
-@app.route(route="savings", methods=["GET", "POST"], auth_level=func.AuthLevel.ANONYMOUS)
+@app.route(
+    route="savings", methods=["GET", "POST"], auth_level=func.AuthLevel.ANONYMOUS
+)
 def savings_handler(req: func.HttpRequest) -> func.HttpResponse:
     """Handles getting and updating savings calculation data."""
     logging.info("Processing savings request.")
@@ -164,9 +166,7 @@ def savings_handler(req: func.HttpRequest) -> func.HttpResponse:
         if req.method == "GET":
             data = load_savings_data()
             return func.HttpResponse(
-                json.dumps(data), 
-                mimetype="application/json",
-                status_code=200
+                json.dumps(data), mimetype="application/json", status_code=200
             )
 
         elif req.method == "POST":
