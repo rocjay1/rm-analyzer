@@ -11,8 +11,8 @@ import azure.functions as func
 from rmanalyzer.config import get_config_from_str, validate_config
 from rmanalyzer.emailer import SummaryEmail
 from rmanalyzer.models import Group, Person
-from rmanalyzer.transactions import get_transactions
 from rmanalyzer.storage import load_savings_data, save_savings_data
+from rmanalyzer.transactions import get_transactions
 
 app = func.FunctionApp()
 
