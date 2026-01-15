@@ -21,7 +21,7 @@ def validate_config(config: dict) -> None:
             check_type(p["Name"], str)
             check_type(p["Email"], str)
             check_type(p["Accounts"], list[int])
-        check_type(config["Owner"], str)
+
     except (KeyError, TypeCheckError) as ex:
         logger.error("Invalid configuration: %s", ex)
         raise
