@@ -72,7 +72,6 @@ class TestFunctionApp(unittest.TestCase):
             "People": [
                 {"Name": "Alice", "Email": "alice@example.com", "Accounts": [123]}
             ],
-            "Owner": "Alice",
             "SenderEmail": "sender@example.com",
         }
 

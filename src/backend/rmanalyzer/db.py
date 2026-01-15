@@ -7,7 +7,7 @@ import logging
 import os
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 from azure.data.tables import TableClient, TableTransactionError, UpdateMode
 from azure.identity import DefaultAzureCredential
@@ -42,7 +42,7 @@ def _get_table_client(table_name: str) -> TableClient:
 
     try:
         client.create_table()
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         # Ignore if table already exists
         if "TableAlreadyExists" not in str(e):
             logger.warning("Could not create table (might already exist): %s", e)
@@ -88,7 +88,7 @@ def save_transactions(transactions: List[Transaction]) -> None:
         try:
             # upsert_entity with REPLACE mode will update existing entities
             client.upsert_entity(mode=UpdateMode.REPLACE, entity=entity)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error("Failed to save transaction %s: %s", row_key, e)
             # Continue saving others even if one fails
 
@@ -128,7 +128,7 @@ def save_savings(month: str, data: Dict[str, Any]) -> None:
         )
     )
 
-    operations = []
+    operations: List[Tuple[str, Any]] = []
 
     # 2. Add delete operations
     for entity in existing_entities:

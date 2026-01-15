@@ -116,9 +116,9 @@ class Group:
     def get_oldest_transaction(self) -> date:
         """Return the date of the oldest transaction in the group."""
         dates = [
-            p.get_oldest_transaction()
-            for p in self.members
-            if p.get_oldest_transaction()
+            d
+            for d in (p.get_oldest_transaction() for p in self.members)
+            if d is not None
         ]
         if not dates:
             raise ValueError("No transactions found in group")
@@ -127,9 +127,9 @@ class Group:
     def get_newest_transaction(self) -> date:
         """Return the date of the newest transaction in the group."""
         dates = [
-            p.get_newest_transaction()
-            for p in self.members
-            if p.get_newest_transaction()
+            d
+            for d in (p.get_newest_transaction() for p in self.members)
+            if d is not None
         ]
         if not dates:
             raise ValueError("No transactions found in group")

@@ -2,6 +2,7 @@
 Azure Function App entry point for RMAnalyzer.
 """
 
+import functools
 import json
 import logging
 import os
@@ -18,18 +19,14 @@ from rmanalyzer.transactions import get_transactions
 app = func.FunctionApp()
 
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
-_CONFIG_CACHE = None
 
 # Limit file size to 10MB to prevent DoS
 MAX_FILE_SIZE = 10 * 1024 * 1024
 
 
+@functools.lru_cache(maxsize=1)
 def get_config() -> dict:
     """Load and validate configuration, using cache if available."""
-    global _CONFIG_CACHE
-    if _CONFIG_CACHE:
-        return _CONFIG_CACHE
-
     config = None
     # 1. Try Environment Variable (Production)
     env_config = os.environ.get("APP_CONFIG_JSON")
@@ -46,7 +43,6 @@ def get_config() -> dict:
         )
 
     validate_config(config)
-    _CONFIG_CACHE = config
     return config
 
 
@@ -86,15 +82,11 @@ def upload_and_analyze(req: func.HttpRequest) -> func.HttpResponse:
     """Receives a CSV, processes it immediately using local config, and sends an email."""
     logging.info("Processing upload and analysis request.")
 
-    # Security check: Ensure the request is coming via Static Web App Authentication
-    client_principal = req.headers.get("x-ms-client-principal")
-    if not client_principal:
-        return func.HttpResponse(
-            "Unauthorized: Requests must be authenticated via Static Web App.",
-            status_code=401,
-        )
+    if "x-ms-client-principal" not in req.headers:
+        return func.HttpResponse("Unauthorized", status_code=401)
 
     try:
+        # 1. Parse Uploaded File
         csv_content, error_resp = _get_uploaded_file_content(req)
         if error_resp:
             return error_resp
@@ -120,7 +112,7 @@ def upload_and_analyze(req: func.HttpRequest) -> func.HttpResponse:
         # 3a. Save to Database (Async/Upsert)
         try:
             db.save_transactions(transactions)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             # Don't fail the request if DB save fails, just log it.
             logging.error("Failed to save transactions to DB: %s", e)
 
@@ -149,7 +141,7 @@ def upload_and_analyze(req: func.HttpRequest) -> func.HttpResponse:
             status_code=200,
         )
 
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         logging.error("Error during immediate processing: %s", e)
         return func.HttpResponse(f"Processing Error: {str(e)}", status_code=500)
 
@@ -187,8 +179,8 @@ def savings_handler(req: func.HttpRequest) -> func.HttpResponse:
             db.save_savings(month, req_body)
             return func.HttpResponse("Saved successfully", status_code=200)
 
-    except Exception as e:
-        logging.error(f"Error in savings handler: {e}")
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        logging.error("Error in savings handler: %s", e)
         return func.HttpResponse(f"Internal Error: {str(e)}", status_code=500)
 
     return func.HttpResponse("Method not supported", status_code=405)
