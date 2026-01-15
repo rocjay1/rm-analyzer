@@ -167,9 +167,9 @@ def save_savings(month: str, data: Dict[str, Any]) -> None:
 
     # 4. Submit transaction (chunking if necessary)
     # Azure Table Batch is limited to 100 operations.
-    BATCH_SIZE = 100
-    for i in range(0, len(operations), BATCH_SIZE):
-        batch = operations[i : i + BATCH_SIZE]
+    batch_size = 100
+    for i in range(0, len(operations), batch_size):
+        batch = operations[i : i + batch_size]
         try:
             client.submit_transaction(batch)
         except TableTransactionError as e:

@@ -13,6 +13,7 @@ from rmanalyzer.config import get_config_from_str, validate_config
 from rmanalyzer.emailer import SummaryEmail
 from rmanalyzer.models import Group, Person
 from rmanalyzer.transactions import get_transactions
+from rmanalyzer import db
 
 app = func.FunctionApp()
 
@@ -118,8 +119,6 @@ def upload_and_analyze(req: func.HttpRequest) -> func.HttpResponse:
 
         # 3a. Save to Database (Async/Upsert)
         try:
-            from rmanalyzer import db
-
             db.save_transactions(transactions)
         except Exception as e:
             # Don't fail the request if DB save fails, just log it.
@@ -163,8 +162,6 @@ def savings_handler(req: func.HttpRequest) -> func.HttpResponse:
     logging.info("Processing savings request.")
 
     try:
-        from rmanalyzer import db
-
         # Default month to current month if not provided
         current_month = datetime.now().strftime("%Y-%m")
 
