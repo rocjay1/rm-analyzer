@@ -3,12 +3,23 @@ async function loadData() {
     const statusSpan = document.getElementById('status');
     const saveBtn = document.getElementById('saveBtn');
 
+    // Get selected month or default to current
+    const monthPicker = document.getElementById('monthPicker');
+    if (!monthPicker.value) {
+        // Set to current month by default
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0'); // January is 0!
+        monthPicker.value = `${year}-${month}`;
+    }
+    const selectedMonth = monthPicker.value;
+
     // Disable save while loading
     saveBtn.disabled = true;
     statusSpan.innerText = 'Loading data...';
 
     try {
-        const response = await fetch('/api/savings');
+        const response = await fetch(`/api/savings?month=${selectedMonth}`);
         if (response.ok) {
             const data = await response.json();
             populateForm(data);
@@ -29,6 +40,8 @@ async function loadData() {
 function populateForm(data) {
     if (data.startingBalance !== undefined) {
         document.getElementById('startingBalance').value = data.startingBalance;
+    } else {
+        document.getElementById('startingBalance').value = "";
     }
 
     const tbody = document.getElementById('costsBody');
@@ -87,6 +100,12 @@ function recalculate() {
 async function saveData() {
     const statusSpan = document.getElementById('status');
     const saveBtn = document.getElementById('saveBtn');
+    const monthPicker = document.getElementById('monthPicker');
+
+    if (!monthPicker.value) {
+        statusSpan.innerText = 'Please select a month.';
+        return;
+    }
 
     saveBtn.disabled = true;
     statusSpan.innerText = 'Saving...';
@@ -103,6 +122,7 @@ async function saveData() {
     });
 
     const payload = {
+        month: monthPicker.value,
         startingBalance,
         items
     };
@@ -132,6 +152,8 @@ async function saveData() {
 
 // Global listener for starting balance changes
 document.getElementById('startingBalance').addEventListener('input', recalculate);
+// Listener for month changes
+document.getElementById('monthPicker').addEventListener('change', loadData);
 
 // Load on start
 loadData();
