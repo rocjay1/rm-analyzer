@@ -9,11 +9,11 @@ from datetime import datetime
 from typing import Optional, Tuple
 
 import azure.functions as func
+from rmanalyzer import db
 from rmanalyzer.config import get_config_from_str, validate_config
 from rmanalyzer.emailer import SummaryEmail
 from rmanalyzer.models import Group, Person
 from rmanalyzer.transactions import get_transactions
-from rmanalyzer import db
 
 app = func.FunctionApp()
 
