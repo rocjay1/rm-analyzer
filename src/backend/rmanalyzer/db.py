@@ -7,9 +7,9 @@ import logging
 import os
 import uuid
 from datetime import datetime
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
-from azure.data.tables import TableClient, UpdateMode, TableTransactionError
+from azure.data.tables import TableClient, TableTransactionError, UpdateMode
 from azure.identity import DefaultAzureCredential
 
 from .models import Transaction
