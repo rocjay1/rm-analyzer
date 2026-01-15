@@ -14,12 +14,19 @@ async function loadData() {
     saveBtn.disabled = true;
     statusSpan.innerText = 'Loading data...';
 
+    // Clear form immediately to prevent stale data
+    populateForm({});
+    recalculate();
+
     try {
         const response = await fetch(`/api/savings?month=${selectedMonth}`);
         if (response.ok) {
             const data = await response.json();
             populateForm(data);
             recalculate();
+            statusSpan.innerText = '';
+        } else if (response.status === 404) {
+            // New month with no data - form is already cleared
             statusSpan.innerText = '';
         } else {
             console.error('Failed to load data', response.statusText);
@@ -153,10 +160,21 @@ async function saveData() {
     }
 }
 
-// Global listener for starting balance changes
-document.getElementById('startingBalance').addEventListener('input', recalculate);
-// Listener for month changes
-document.getElementById('monthPicker').addEventListener('change', loadData);
+// Initialize on load
+document.addEventListener('DOMContentLoaded', () => {
+    // Function declarations are hoisted, so this reference is fine
+    const monthPicker = document.getElementById('monthPicker');
 
-// Load on start
-loadData();
+    // Set default if empty
+    if (!monthPicker.value) {
+        monthPicker.value = getCurrentMonth();
+    }
+
+    // Global listener for starting balance changes
+    document.getElementById('startingBalance').addEventListener('input', recalculate);
+    // Listener for month changes
+    monthPicker.addEventListener('change', loadData);
+
+    // Initial load
+    loadData();
+});
