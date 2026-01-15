@@ -5,50 +5,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RM Analyzer Upload</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .container {
-            border: 1px solid #ccc;
-            padding: 20px;
-            border-radius: 8px;
-        }
-
-        .btn {
-            background-color: #0078d4;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            cursor: pointer;
-        }
-
-        .btn:disabled {
-            background-color: #ccc;
-        }
-
-        #status {
-            margin-top: 20px;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
-    <h1>RM Analyzer</h1>
+    <!-- Navbar injected by navbar.js -->
+
     <div class="container">
+        <h1>RM Analyzer</h1>
         <p>Upload your transaction CSV to run the analysis.</p>
-        <div id="user-info"></div>
-        <p><a href="savings.html" style="color: #0078d4; text-decoration: none; font-weight: bold;">💰 Open Savings
-                Calculator</a></p>
         <br>
         <input type="file" id="fileInput" accept=".csv" />
         <button id="uploadBtn" class="btn" onclick="uploadFile()">Upload</button>
         <div id="status"></div>
     </div>
+
+    <script src="navbar.js"></script>
     <script src="app.js"></script>
 </body>
 

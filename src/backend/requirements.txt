@@ -4,3 +4,4 @@ azure-identity
 typeguard>=4.2.1
 yattag>=1.15.2
 azure-storage-blob
+azure-data-tables

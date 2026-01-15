@@ -1,16 +1,3 @@
-async function getUserInfo() {
-    try {
-        const response = await fetch('/.auth/me');
-        const payload = await response.json();
-        const { clientPrincipal } = payload;
-        if (clientPrincipal) {
-            document.getElementById('user-info').innerText = `Hello, ${clientPrincipal.userDetails}`;
-        }
-    } catch (error) {
-        console.error('No auth info found (local dev?)');
-    }
-}
-
 async function uploadFile() {
     const fileInput = document.getElementById('fileInput');
     const statusDiv = document.getElementById('status');
@@ -47,5 +34,3 @@ async function uploadFile() {
         btn.disabled = false;
     }
 }
-
-getUserInfo();
