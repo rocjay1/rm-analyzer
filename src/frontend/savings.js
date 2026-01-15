@@ -6,11 +6,7 @@ async function loadData() {
     // Get selected month or default to current
     const monthPicker = document.getElementById('monthPicker');
     if (!monthPicker.value) {
-        // Set to current month by default
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0'); // January is 0!
-        monthPicker.value = `${year}-${month}`;
+        monthPicker.value = getCurrentMonth();
     }
     const selectedMonth = monthPicker.value;
 
@@ -35,6 +31,13 @@ async function loadData() {
     } finally {
         saveBtn.disabled = false;
     }
+}
+
+function getCurrentMonth() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0'); // January is 0!
+    return `${year}-${month}`;
 }
 
 function populateForm(data) {
