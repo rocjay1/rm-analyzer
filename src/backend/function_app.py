@@ -5,13 +5,13 @@ Azure Function App entry point for RMAnalyzer.
 import json
 import logging
 import os
+from datetime import datetime
 from typing import Optional, Tuple
 
 import azure.functions as func
 from rmanalyzer.config import get_config_from_str, validate_config
 from rmanalyzer.emailer import SummaryEmail
 from rmanalyzer.models import Group, Person
-from rmanalyzer.storage import load_savings_data, save_savings_data
 from rmanalyzer.transactions import get_transactions
 
 app = func.FunctionApp()
@@ -116,6 +116,15 @@ def upload_and_analyze(req: func.HttpRequest) -> func.HttpResponse:
                 error_msg += f"\n... and {len(errors) - 20} more errors."
             return func.HttpResponse(error_msg, status_code=400)
 
+        # 3a. Save to Database (Async/Upsert)
+        try:
+            from rmanalyzer import db
+
+            db.save_transactions(transactions)
+        except Exception as e:
+            # Don't fail the request if DB save fails, just log it.
+            logging.error("Failed to save transactions to DB: %s", e)
+
         members = get_members(config["People"])
         group = Group(members)
         group.add_transactions(transactions)
@@ -137,7 +146,8 @@ def upload_and_analyze(req: func.HttpRequest) -> func.HttpResponse:
         email.send()
 
         return func.HttpResponse(
-            "Analysis complete. Summary email sent.", status_code=200
+            "Analysis complete. Transactions saved and summary email sent.",
+            status_code=200,
         )
 
     except Exception as e:
@@ -152,18 +162,15 @@ def savings_handler(req: func.HttpRequest) -> func.HttpResponse:
     """Handles getting and updating savings calculation data."""
     logging.info("Processing savings request.")
 
-    # Security check: Ensure the request is coming via Static Web App Authentication
-    # (Optional: you might want to uncomment this for production security)
-    # client_principal = req.headers.get("x-ms-client-principal")
-    # if not client_principal:
-    #     return func.HttpResponse(
-    #         "Unauthorized: Requests must be authenticated via Static Web App.",
-    #         status_code=401,
-    #     )
-
     try:
+        from rmanalyzer import db
+
+        # Default month to current month if not provided
+        current_month = datetime.now().strftime("%Y-%m")
+
         if req.method == "GET":
-            data = load_savings_data()
+            month = req.params.get("month", current_month)
+            data = db.get_savings(month)
             return func.HttpResponse(
                 json.dumps(data), mimetype="application/json", status_code=200
             )
@@ -174,11 +181,13 @@ def savings_handler(req: func.HttpRequest) -> func.HttpResponse:
             except ValueError:
                 return func.HttpResponse("Invalid JSON", status_code=400)
 
-            # Basic validation
-            if "startingBalance" not in req_body or "items" not in req_body:
+            month = req_body.get("month", current_month)
+
+            # Basic validation (allow empty items, but check structure)
+            if "startingBalance" not in req_body:
                 return func.HttpResponse("Missing required fields", status_code=400)
 
-            save_savings_data(req_body)
+            db.save_savings(month, req_body)
             return func.HttpResponse("Saved successfully", status_code=200)
 
     except Exception as e:
