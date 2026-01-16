@@ -159,14 +159,14 @@ def process_queue_item(msg: func.QueueMessage) -> None:
         # 3. Analysis
         transactions, errors = get_transactions(csv_content)
 
-        # If critical errors (e.g. empty file), we might stop.
-        # But for row errors, we might still proceed with valid ones?
-        # Current logic: if ANY errors, we abort email?
-        # Original logic returned 400. Here we can't return 400.
-        # We should probably log errors or email them.
+        # If no valid transactions were found (e.g., empty file or all rows invalid),
+        # log the errors and abort processing.
         if errors and len(transactions) == 0:
-            logging.error("CSV Validation Errors: %s", errors)
+            logging.error("CSV Validation Failed. No valid transactions found. Errors: %s", errors)
             return
+
+        if errors:
+            logging.warning("Some CSV rows had validation errors: %s", errors)
 
         # 4. Save to DB
         try:
