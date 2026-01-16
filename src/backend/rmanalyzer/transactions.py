@@ -24,7 +24,40 @@ def parse_date(date_str: str) -> date | None:
     raise ValueError(f"Date '{date_str}' does not match any supported format.")
 
 
-def to_transaction(  # pylint: disable=too-many-return-statements
+def _parse_account_number(clean_row: dict) -> int:
+    try:
+        return int(clean_row.get("Account Number", ""))
+    except ValueError as e:
+        raise ValueError(
+            f"Invalid or missing 'Account Number': {clean_row.get('Account Number')}"
+        ) from e
+
+
+def _parse_amount(clean_row: dict) -> Decimal:
+    try:
+        return Decimal(clean_row.get("Amount", "0"))
+    except (ValueError, InvalidOperation) as e:
+        raise ValueError(f"Invalid or missing 'Amount': {clean_row.get('Amount')}") from e
+
+
+def _parse_category(clean_row: dict) -> Category:
+    try:
+        return Category(clean_row.get("Category"))
+    except ValueError:
+        return Category.OTHER
+
+
+def _parse_ignored_from(clean_row: dict) -> IgnoredFrom | None:
+    ignored_from_val = clean_row.get("Ignored From", "")
+    try:
+        return IgnoredFrom(ignored_from_val)
+    except ValueError as e:
+        raise ValueError(
+            f"Invalid 'Ignored From' value: {clean_row.get('Ignored From')}"
+        ) from e
+
+
+def to_transaction(
     row: dict,
 ) -> tuple[Transaction | None, str | None]:
     """
@@ -37,66 +70,46 @@ def to_transaction(  # pylint: disable=too-many-return-statements
     except AttributeError:
         return None, "Unexpected error: row is not a valid dictionary"
 
-    # 1. Date
-    if "Date" not in clean_row:
-        return None, "Missing 'Date' field"
     try:
+        # 1. Date
+        if "Date" not in clean_row:
+            return None, "Missing 'Date' field"
         transaction_date = parse_date(clean_row["Date"])
+
+        if transaction_date is None:
+            return None, "Date parse failed unexpectedly"
+
+        # 2. Name
+        if "Name" not in clean_row:
+            return None, "Missing 'Name' field"
+        transaction_name = clean_row["Name"]
+
+        # 3. Account Number
+        transaction_account_number = _parse_account_number(clean_row)
+
+        # 4. Amount
+        transaction_amount = _parse_amount(clean_row)
+
+        # 5. Category (Optional)
+        transaction_category = _parse_category(clean_row)
+
+        # 6. Ignored From (Optional)
+        transaction_ignore = _parse_ignored_from(clean_row)
+
+        return (
+            Transaction(
+                transaction_date,
+                transaction_name,
+                transaction_account_number,
+                transaction_amount,
+                transaction_category,
+                transaction_ignore,
+            ),
+            None,
+        )
+
     except ValueError as e:
         return None, str(e)
-
-    if transaction_date is None:
-        return None, "Date parse failed unexpectedly"
-
-    # 2. Name
-    if "Name" not in clean_row:
-        return None, "Missing 'Name' field"
-    transaction_name = clean_row["Name"]
-
-    # 3. Account Number
-    try:
-        transaction_account_number = int(clean_row.get("Account Number", ""))
-    except ValueError:
-        return (
-            None,
-            f"Invalid or missing 'Account Number': {clean_row.get('Account Number')}",
-        )
-
-    # 4. Amount
-    try:
-        # Use Decimal for financial calculations
-        transaction_amount = Decimal(clean_row.get("Amount", "0"))
-    except (ValueError, InvalidOperation):
-        return None, f"Invalid or missing 'Amount': {clean_row.get('Amount')}"
-
-    # 5. Category (Optional)
-    try:
-        transaction_category = Category(clean_row.get("Category"))
-    except ValueError:
-        # Treat unknown categories as OTHER
-        transaction_category = Category.OTHER
-
-    # 6. Ignored From (Optional)
-    try:
-        ignored_from_val = clean_row.get("Ignored From", "")
-        transaction_ignore = IgnoredFrom(ignored_from_val)
-    except ValueError:
-        return (
-            None,
-            f"Invalid 'Ignored From' value: {clean_row.get('Ignored From')}",
-        )
-
-    return (
-        Transaction(
-            transaction_date,
-            transaction_name,
-            transaction_account_number,
-            transaction_amount,
-            transaction_category,
-            transaction_ignore,
-        ),
-        None,
-    )
 
 
 def get_transactions(content: str) -> tuple[list[Transaction], list[str]]:
