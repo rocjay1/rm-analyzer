@@ -13,16 +13,14 @@ from azure.storage.queue import QueueClient
 
 logger = logging.getLogger(__name__)
 
-STORAGE_ACCOUNT_URL = os.environ.get("RM_ANALYZER_STORAGE_ACCOUNT_URL")
+STORAGE_ACCOUNT_URL = os.environ.get("STORAGE_ACCOUNT_URL")
 QUEUE_NAME = "csv-processing"
 
 
 def _get_queue_client() -> QueueClient:
     """Returns a QueueClient."""
     if not STORAGE_ACCOUNT_URL:
-        raise ValueError(
-            "RM_ANALYZER_STORAGE_ACCOUNT_URL environment variable is not set."
-        )
+        raise ValueError("STORAGE_ACCOUNT_URL environment variable is not set.")
 
     credential = DefaultAzureCredential()
     # Construct the queue endpoint URL safely

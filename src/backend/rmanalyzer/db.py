@@ -18,7 +18,7 @@ from .models import Transaction
 logger = logging.getLogger(__name__)
 
 # Environment variable set by our infrastructure
-STORAGE_ACCOUNT_URL = os.environ.get("RM_ANALYZER_STORAGE_ACCOUNT_URL")
+STORAGE_ACCOUNT_URL = os.environ.get("STORAGE_ACCOUNT_URL")
 TRANSACTIONS_TABLE = "transactions"
 SAVINGS_TABLE = "savings"
 
@@ -26,9 +26,7 @@ SAVINGS_TABLE = "savings"
 def _get_table_client(table_name: str) -> TableClient:
     """Returns a TableClient, ensuring the table exists."""
     if not STORAGE_ACCOUNT_URL:
-        raise ValueError(
-            "RM_ANALYZER_STORAGE_ACCOUNT_URL environment variable is not set."
-        )
+        raise ValueError("STORAGE_ACCOUNT_URL environment variable is not set.")
 
     credential = DefaultAzureCredential()
 
