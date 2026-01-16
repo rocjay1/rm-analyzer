@@ -25,6 +25,6 @@ def process_upload_queue(msg: func.QueueMessage) -> None:
 @app.route(
     route="savings", methods=["GET", "POST"], auth_level=func.AuthLevel.ANONYMOUS
 )
-def savings_handler(req: func.HttpRequest) -> func.HttpResponse:
+def handle_savings(req: func.HttpRequest) -> func.HttpResponse:
     """Handles getting and updating savings calculation data."""
     return controllers.handle_savings_dbrequest(req)
