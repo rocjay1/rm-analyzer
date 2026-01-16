@@ -9,11 +9,21 @@ import os
 from datetime import datetime
 
 import azure.functions as func
-from rmanalyzer import blob_storage, db, queue_utils
+from rmanalyzer import blob_utils, db, queue_utils
 from rmanalyzer.config import get_config_from_str, validate_config
 from rmanalyzer.emailer import SummaryEmail
 from rmanalyzer.models import Group, Person
 from rmanalyzer.transactions import get_transactions
+
+__all__ = [
+    "handle_upload_async",
+    "handle_savings_dbrequest",
+    "process_queue_item",
+    "get_config",
+    "get_members",
+]
+
+logger = logging.getLogger(__name__)
 
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config.json")
 
@@ -25,7 +35,7 @@ MAX_FILE_SIZE = 10 * 1024 * 1024
 def get_config() -> dict:
     """Load and validate configuration, using cache if available."""
     config = None
-    # 1. Try Environment Variable (Production)
+    # Try Environment Variable (Production)
     env_config = os.environ.get("APP_CONFIG_JSON")
     if env_config:
         try:
@@ -33,7 +43,7 @@ def get_config() -> dict:
         except json.JSONDecodeError as e:
             logging.error("Failed to parse APP_CONFIG_JSON: %s", e)
 
-    # 2. Try File (Local Dev) if env var failed or not set
+    # Try File (Local Dev) if env var failed or not set
     if config is None and os.path.exists(CONFIG_PATH):
         try:
             with open(CONFIG_PATH, "r", encoding="utf-8") as f:
@@ -100,11 +110,11 @@ def handle_upload_async(req: func.HttpRequest) -> func.HttpResponse:
             return error_resp
 
         # 2. Upload to Blob Storage
-        # Generate a unique name to avoid overwrites (though blob_storage handles it, good practice)
+        # Generate a unique name to avoid overwrites (though blob_utils handles it, good practice)
         base_name = os.path.basename(filename)
         blob_name = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{base_name}"
 
-        blob_url = blob_storage.upload_csv(blob_name, content)
+        blob_url = blob_utils.upload_csv(blob_name, content)
         logging.info("Uploaded blob: %s", blob_url)
 
         # 3. Enqueue Message
@@ -137,7 +147,7 @@ def process_queue_item(msg: func.QueueMessage) -> None:
             return
 
         # 1. Download CSV
-        csv_content = blob_storage.download_csv(blob_name)
+        csv_content = blob_utils.download_csv(blob_name)
 
         # 2. Load Config
         try:

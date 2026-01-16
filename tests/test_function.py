@@ -42,7 +42,7 @@ class TestFunctionApp(unittest.TestCase):
         self.assertEqual(resp.status_code, 400)
 
     @patch("rmanalyzer.controllers.get_config")
-    @patch("rmanalyzer.blob_storage.upload_csv")
+    @patch("rmanalyzer.blob_utils.upload_csv")
     @patch("rmanalyzer.queue_utils.enqueue_message")
     def test_success_async(
         self,

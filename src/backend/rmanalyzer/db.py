@@ -15,6 +15,8 @@ from azure.identity import DefaultAzureCredential
 
 from .models import Transaction
 
+__all__ = ["save_transactions", "get_savings", "save_savings"]
+
 logger = logging.getLogger(__name__)
 
 # Environment variable set by our infrastructure
@@ -49,19 +51,14 @@ def _get_table_client(table_name: str) -> TableClient:
     return client
 
 
-def _generate_row_key(t: Transaction) -> str:
+def _generate_row_key(t: Transaction, occurrence_index: int = 0) -> str:
     """
-    Generates a deterministic unique key for a transaction to handle deduplication logic,
-    but appends a salt to ensure true uniqueness for identical transactions.
+    Generates a deterministic unique key for a transaction to handle deduplication logic.
+    Uses an occurrence index to handle identical transactions strictly within the same upload batch.
     """
-    # Deterministic part
-    unique_string = f"{t.date.isoformat()}|{t.name}|{t.amount}|{t.account_number}"
-    base_hash = hashlib.sha256(unique_string.encode("utf-8")).hexdigest()
-
-    # Non-deterministic random suffix to prevent legitimate duplicates from being overwritten
-    random_suffix = str(uuid.uuid4())[:8]
-
-    return f"{base_hash}-{random_suffix}"
+    # Deterministic part including occurrence index
+    unique_string = f"{t.date.isoformat()}|{t.name}|{t.amount}|{t.account_number}|{occurrence_index}"
+    return hashlib.sha256(unique_string.encode("utf-8")).hexdigest()
 
 
 def save_transactions(transactions: list[Transaction]) -> None:
@@ -86,13 +83,22 @@ def save_transactions(transactions: list[Transaction]) -> None:
 
     # 2. Process each partition group
     for pk, trans_list in partitions.items():
+        # Track occurrences of identical transactions within this partition
+        # to ensure unique (but deterministic) RowKeys for duplicates in the same file.
+        occurrences: dict[Any, int] = collections.defaultdict(int)
+
         # 3. Chunk into batches of 100
         for i in range(0, len(trans_list), 100):
             chunk = trans_list[i : i + 100]
             batch = []
 
             for t in chunk:
-                row_key = _generate_row_key(t)
+                # Calculate occurrence index for this specific transaction signature
+                txn_signature = (t.date, t.name, t.amount, t.account_number)
+                idx = occurrences[txn_signature]
+                occurrences[txn_signature] += 1
+
+                row_key = _generate_row_key(t, idx)
 
                 entity = {
                     "PartitionKey": pk,

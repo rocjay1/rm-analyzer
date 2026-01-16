@@ -1,4 +1,3 @@
-import hashlib
 import unittest
 from datetime import date
 from unittest.mock import MagicMock, patch
@@ -9,7 +8,7 @@ from rmanalyzer.models import Category, IgnoredFrom, Transaction
 
 class TestDB(unittest.TestCase):
     def test_generate_row_key(self):
-        """Test that row keys start with deterministic prefix."""
+        """Test that row keys are deterministic."""
         t1 = Transaction(
             transact_date=date(2023, 1, 1),
             name="Test Transaction",
@@ -20,8 +19,12 @@ class TestDB(unittest.TestCase):
         )
 
         key1 = db._generate_row_key(t1)
+        key2 = db._generate_row_key(t1)  # Identity check
 
-        # Same data should produce similar key (same prefix, diff suffix)
+        # Should be identical now (idempotence)
+        self.assertEqual(key1, key2)
+
+        # Same data should produce SAME key if index is default
         t2 = Transaction(
             transact_date=date(2023, 1, 1),
             name="Test Transaction",
@@ -30,15 +33,12 @@ class TestDB(unittest.TestCase):
             category=Category.GROCERIES,
             ignore=IgnoredFrom.BUDGET,
         )
-        key2 = db._generate_row_key(t2)
+        key3 = db._generate_row_key(t2)
+        self.assertEqual(key1, key3)
 
-        # Row key format is {base_hash}-{random_suffix}
-        # We verify that they are DIFFERENT now, but share prefix logic if we cared.
-        # Actually random suffix guarantees difference.
-        self.assertNotEqual(key1, key2)
-
-        # Verify length/format roughly
-        self.assertEqual(len(key1.split("-")), 2)
+        # Different index should produce different key
+        key4 = db._generate_row_key(t1, occurrence_index=1)
+        self.assertNotEqual(key1, key4)
 
     @patch("rmanalyzer.db._get_table_client")
     def test_save_transactions(self, mock_get_client):

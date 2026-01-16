@@ -11,6 +11,8 @@ from typing import Any
 from azure.identity import DefaultAzureCredential
 from azure.storage.queue import QueueClient
 
+__all__ = ["enqueue_message"]
+
 logger = logging.getLogger(__name__)
 
 STORAGE_ACCOUNT_URL = os.environ.get("STORAGE_ACCOUNT_URL")
