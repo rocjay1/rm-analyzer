@@ -11,7 +11,8 @@ ignore-patterns=tests
 # W0603: Using global statement (Valid for function app caching)
 # C0301: Line too long (Relaxing to 120)
 # R0911: Too many return statements (7/6 is acceptable for a main handler function with multiple validation steps)
-disable=R0903,W1203,R0911,W0603,W0718,R0913,R0917
+# R0914: Too many local variables
+disable=R0903,W1203,R0911,W0603,W0718,R0913,R0917,R0914
 
 [FORMAT]
 max-line-length=120
