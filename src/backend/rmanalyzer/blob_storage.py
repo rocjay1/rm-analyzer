@@ -2,10 +2,11 @@
 Blob Storage utilities for uploading CSVs.
 """
 
-import os
 import logging
-from azure.storage.blob import BlobServiceClient
+import os
+
 from azure.identity import DefaultAzureCredential
+from azure.storage.blob import BlobServiceClient
 
 logger = logging.getLogger(__name__)
 
