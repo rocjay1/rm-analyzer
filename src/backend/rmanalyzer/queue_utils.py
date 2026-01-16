@@ -2,6 +2,7 @@
 Queue Storage utilities for async processing.
 """
 
+import base64
 import json
 import logging
 import os
@@ -51,7 +52,8 @@ def enqueue_message(message: dict[str, Any]) -> None:
     # the QueueTrigger will receive it.
     message_str = json.dumps(message)
 
-    # Base64 encoding is sometimes required depending on how the Function is configured to read it.
-    # Default python v2 model usually handles string. Let's stick to string JSON.
-    # If issues arise, we can add base64.
-    client.send_message(message_str)
+    # Base64 encoding is standard for Azure Functions Queue Trigger
+    message_bytes = message_str.encode("utf-8")
+    message_b64 = base64.b64encode(message_bytes).decode("utf-8")
+
+    client.send_message(message_b64)
