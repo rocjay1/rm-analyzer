@@ -24,7 +24,9 @@ def parse_date(date_str: str) -> date | None:
     raise ValueError(f"Date '{date_str}' does not match any supported format.")
 
 
-def to_transaction(row: dict) -> tuple[Transaction | None, str | None]:
+def to_transaction(  # pylint: disable=too-many-return-statements
+    row: dict,
+) -> tuple[Transaction | None, str | None]:
     """
     Parses a CSV row into a Transaction object.
     Returns (Transaction, None) if successful, or (None, error_message) if not.
