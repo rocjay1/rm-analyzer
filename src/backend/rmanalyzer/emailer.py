@@ -6,7 +6,7 @@ import os
 
 import yattag
 
-from .azure_utils import send_email
+from .mail_utils import send_email
 from .models import Category, Group
 from .transactions import to_currency
 

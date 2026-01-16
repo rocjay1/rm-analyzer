@@ -8,6 +8,8 @@ import os
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
 
+__all__ = ["upload_csv", "download_csv"]
+
 logger = logging.getLogger(__name__)
 
 STORAGE_ACCOUNT_URL = os.environ.get("STORAGE_ACCOUNT_URL")
