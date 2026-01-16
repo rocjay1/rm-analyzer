@@ -45,7 +45,14 @@ resource "azurerm_role_assignment" "storage_queue_contributor" {
   principal_id         = azurerm_function_app_flex_consumption.app.identity[0].principal_id
 }
 
-# Table Data Contributor is required for internal coordination (checkpoints/timers)
+# Queue Data Message Processor is required for Function App to process queue messages
+resource "azurerm_role_assignment" "storage_queue_message_processor" {
+  scope                = azurerm_storage_account.sa.id
+  role_definition_name = "Storage Queue Data Message Processor"
+  principal_id         = azurerm_function_app_flex_consumption.app.identity[0].principal_id
+}
+
+# Table Data Contributor is required for internal coordination
 resource "azurerm_role_assignment" "storage_table_contributor" {
   scope                = azurerm_storage_account.sa.id
   role_definition_name = "Storage Table Data Contributor"
