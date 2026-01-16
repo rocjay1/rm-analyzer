@@ -6,8 +6,9 @@ import hashlib
 import logging
 import os
 import uuid
+import collections
 from datetime import datetime
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from azure.data.tables import TableClient, TableTransactionError, UpdateMode
 from azure.identity import DefaultAzureCredential
@@ -52,48 +53,74 @@ def _get_table_client(table_name: str) -> TableClient:
 
 def _generate_row_key(t: Transaction) -> str:
     """
-    Generates a deterministic unique key for a transaction to handle deduplication.
-    Composite of: Date + Description + Amount + AccountNumber
+    Generates a deterministic unique key for a transaction to handle deduplication logic,
+    but appends a salt to ensure true uniqueness for identical transactions.
     """
+    # Deterministic part
     unique_string = f"{t.date.isoformat()}|{t.name}|{t.amount}|{t.account_number}"
-    return hashlib.sha256(unique_string.encode("utf-8")).hexdigest()
+    base_hash = hashlib.sha256(unique_string.encode("utf-8")).hexdigest()
+
+    # Non-deterministic random suffix to prevent legitimate duplicates from being overwritten
+    random_suffix = str(uuid.uuid4())[:8]
+
+    return f"{base_hash}-{random_suffix}"
 
 
-def save_transactions(transactions: List[Transaction]) -> None:
+def save_transactions(transactions: list[Transaction]) -> None:
     """
-    Saves a list of transactions to Azure Table Storage using upsert logic.
+    Saves a list of transactions to Azure Table Storage using batched upserts.
+    Groups by PartitionKey (Tenant_Month) first, then chunks into batches of 100.
     """
     if not transactions:
         return
 
     client = _get_table_client(TRANSACTIONS_TABLE)
     timestamp = datetime.now().isoformat()
+    # Default tenant for now
+    tenant_id = "default"
 
+    # 1. Group by PartitionKey (Tenant_Month) to satisfy batch requirements
+    partitions = collections.defaultdict(list)
     for t in transactions:
-        row_key = _generate_row_key(t)
-        partition_key = t.date.strftime("%Y-%m")  # Group by Month
+        # Partition Strategy: Tenant_Month
+        pk = f"{tenant_id}_{t.date.strftime('%Y-%m')}"
+        partitions[pk].append(t)
 
-        entity = {
-            "PartitionKey": partition_key,
-            "RowKey": row_key,
-            "Date": t.date.isoformat(),
-            "Description": t.name,
-            "Amount": float(t.amount),
-            "AccountNumber": int(t.account_number),
-            "Category": t.category.value if t.category else "Other",
-            "IgnoredFrom": t.ignore.value if t.ignore else None,
-            "ImportedAt": timestamp,
-        }
+    # 2. Process each partition group
+    for pk, trans_list in partitions.items():
+        # 3. Chunk into batches of 100
+        for i in range(0, len(trans_list), 100):
+            chunk = trans_list[i : i + 100]
+            batch = []
 
-        try:
-            # upsert_entity with REPLACE mode will update existing entities
-            client.upsert_entity(mode=UpdateMode.REPLACE, entity=entity)
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            logger.error("Failed to save transaction %s: %s", row_key, e)
-            # Continue saving others even if one fails
+            for t in chunk:
+                row_key = _generate_row_key(t)
+
+                entity = {
+                    "PartitionKey": pk,
+                    "RowKey": row_key,
+                    "Date": t.date.isoformat(),
+                    "Description": t.name,
+                    # Convert Decimal to float for Table Storage
+                    "Amount": float(t.amount),
+                    "AccountNumber": int(t.account_number),
+                    "Category": t.category.value if t.category else "Other",
+                    "IgnoredFrom": t.ignore.value if t.ignore else None,
+                    "ImportedAt": timestamp,
+                }
+                # Add to batch as an "upsert" operation (REPLACE mode)
+                batch.append(("upsert", entity, {"mode": UpdateMode.REPLACE}))
+
+            try:
+                if batch:
+                    client.submit_transaction(batch)
+            except TableTransactionError as e:
+                logger.error("Failed to submit batch for partition %s: %s", pk, e)
+                # Depending on requirements, might want to raise or continue
+                # For now, we log and continue to attempt other batches.
 
 
-def get_savings(month: str) -> Dict[str, Any]:
+def get_savings(month: str) -> dict[str, object]:
     """
     Retrieves savings data (Summary and Items) for a specific month.
     """
@@ -101,8 +128,8 @@ def get_savings(month: str) -> Dict[str, Any]:
 
     entities = client.query_entities(query_filter=f"PartitionKey eq '{month}'")
 
-    items: List[Dict[str, Any]] = []
-    result: Dict[str, Any] = {"startingBalance": 0.0, "items": items}
+    items: list[dict[str, object]] = []
+    result: dict[str, object] = {"startingBalance": 0.0, "items": items}
 
     for entity in entities:
         if entity["RowKey"] == "SUMMARY":
@@ -115,7 +142,7 @@ def get_savings(month: str) -> Dict[str, Any]:
     return result
 
 
-def save_savings(month: str, data: Dict[str, Any]) -> None:
+def save_savings(month: str, data: dict[str, object]) -> None:
     """
     Saves savings data for a month using a batch transaction (Delete All + Insert All).
     """
@@ -128,7 +155,7 @@ def save_savings(month: str, data: Dict[str, Any]) -> None:
         )
     )
 
-    operations: List[Tuple[str, Any]] = []
+    operations: list[tuple[str, dict[str, Any]]] = []
 
     # 2. Add delete operations
     for entity in existing_entities:
@@ -142,25 +169,28 @@ def save_savings(month: str, data: Dict[str, Any]) -> None:
             {
                 "PartitionKey": month,
                 "RowKey": "SUMMARY",
-                "StartingBalance": float(data.get("startingBalance", 0)),
+                "StartingBalance": float(data.get("startingBalance", 0)),  # type: ignore
             },
         )
     )
 
     # Items
-    for item in data.get("items", []):
-        row_key = f"ITEM_{uuid.uuid4()}"
-        operations.append(
-            (
-                "create",
-                {
-                    "PartitionKey": month,
-                    "RowKey": row_key,
-                    "Name": item.get("name", ""),
-                    "Cost": float(item.get("cost", 0)),
-                },
-            )
-        )
+    items_data = data.get("items", [])
+    if isinstance(items_data, list):
+        for item in items_data:
+            if isinstance(item, dict):
+                row_key = f"ITEM_{uuid.uuid4()}"
+                operations.append(
+                    (
+                        "create",
+                        {
+                            "PartitionKey": month,
+                            "RowKey": row_key,
+                            "Name": item.get("name", ""),
+                            "Cost": float(item.get("cost", 0)),  # type: ignore
+                        },
+                    )
+                )
 
     if not operations:
         return

@@ -23,7 +23,7 @@ async function uploadFile() {
         });
 
         if (response.ok) {
-            statusDiv.innerText = 'Upload successful! Analysis will run shortly.';
+            statusDiv.innerText = 'Upload accepted for processing! You will receive an email shortly.';
         } else {
             const errorText = await response.text();
             throw new Error(errorText || 'Upload failed');
