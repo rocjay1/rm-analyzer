@@ -3,8 +3,8 @@ Transaction parsing and handling utilities.
 """
 
 import csv
-from datetime import datetime
-from typing import List, Optional, Tuple
+from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
 
 from .models import Category, IgnoredFrom, Transaction
 
@@ -14,7 +14,7 @@ __all__ = ["to_transaction", "get_transactions", "to_currency"]
 DATE_FORMATS = ["%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d"]
 
 
-def parse_date(date_str: str) -> Optional[datetime.date]:
+def parse_date(date_str: str) -> date | None:
     """Parse a date string using supported formats."""
     for fmt in DATE_FORMATS:
         try:
@@ -24,7 +24,7 @@ def parse_date(date_str: str) -> Optional[datetime.date]:
     raise ValueError(f"Date '{date_str}' does not match any supported format.")
 
 
-def to_transaction(row: dict) -> Tuple[Optional[Transaction], Optional[str]]:
+def to_transaction(row: dict) -> tuple[Transaction | None, str | None]:
     """
     Parses a CSV row into a Transaction object.
     Returns (Transaction, None) if successful, or (None, error_message) if not.
@@ -43,6 +43,9 @@ def to_transaction(row: dict) -> Tuple[Optional[Transaction], Optional[str]]:
     except ValueError as e:
         return None, str(e)
 
+    if transaction_date is None:
+        return None, "Date parse failed unexpectedly"
+
     # 2. Name
     if "Name" not in clean_row:
         return None, "Missing 'Name' field"
@@ -59,8 +62,9 @@ def to_transaction(row: dict) -> Tuple[Optional[Transaction], Optional[str]]:
 
     # 4. Amount
     try:
-        transaction_amount = float(clean_row.get("Amount", ""))
-    except ValueError:
+        # Use Decimal for financial calculations
+        transaction_amount = Decimal(clean_row.get("Amount", "0"))
+    except (ValueError, InvalidOperation):
         return None, f"Invalid or missing 'Amount': {clean_row.get('Amount')}"
 
     # 5. Category (Optional)
@@ -93,7 +97,7 @@ def to_transaction(row: dict) -> Tuple[Optional[Transaction], Optional[str]]:
     )
 
 
-def get_transactions(content: str) -> Tuple[List[Transaction], List[str]]:
+def get_transactions(content: str) -> tuple[list[Transaction], list[str]]:
     """
     Parses CSV content into a list of Transactions.
     Returns (List[Transaction], List[str]) where the second list contains error messages.
@@ -117,6 +121,6 @@ def get_transactions(content: str) -> Tuple[List[Transaction], List[str]]:
     return transactions, errors
 
 
-def to_currency(num: float) -> str:
+def to_currency(num: Decimal | float | int) -> str:
     """Format a number as a currency string."""
     return f"{num:.2f}"

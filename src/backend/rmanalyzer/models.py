@@ -3,8 +3,8 @@ Data models for transactions, people, and groups.
 """
 
 from datetime import date
+from decimal import Decimal
 from enum import Enum
-from typing import List, Optional
 
 __all__ = [
     "Category",
@@ -44,7 +44,7 @@ class Transaction:
         transact_date: date,
         name: str,
         account_number: int,
-        amount: float,
+        amount: Decimal,
         category: Category,
         ignore: IgnoredFrom,
     ) -> None:
@@ -63,8 +63,8 @@ class Person:
         self,
         name: str,
         email: str,
-        account_numbers: List[int],
-        transactions: Optional[List[Transaction]] = None,
+        account_numbers: list[int],
+        transactions: list[Transaction] | None = None,
     ) -> None:
         self.name = name
         self.email = email
@@ -75,34 +75,37 @@ class Person:
         """Add a transaction to the person's list."""
         self.transactions.append(transaction)
 
-    def get_oldest_transaction(self) -> Optional[date]:
+    def get_oldest_transaction(self) -> date | None:
         """Return the date of the oldest transaction."""
         if not self.transactions:
             return None
         return min(t.date for t in self.transactions)
 
-    def get_newest_transaction(self) -> Optional[date]:
+    def get_newest_transaction(self) -> date | None:
         """Return the date of the newest transaction."""
         if not self.transactions:
             return None
         return max(t.date for t in self.transactions)
 
-    def get_expenses(self, category: Optional[Category] = None) -> float:
+    def get_expenses(self, category: Category | None = None) -> Decimal:
         """Calculate total expenses, optionally filtered by category."""
         if not self.transactions:
-            return 0.0
+            return Decimal("0.00")
         if not category:
-            return sum(t.amount for t in self.transactions)
-        return sum(t.amount for t in self.transactions if t.category == category)
+            return sum((t.amount for t in self.transactions), start=Decimal("0.00"))
+        return sum(
+            (t.amount for t in self.transactions if t.category == category),
+            start=Decimal("0.00"),
+        )
 
 
 class Group:
     """A group of people for expense analysis."""
 
-    def __init__(self, members: List[Person]) -> None:
+    def __init__(self, members: list[Person]) -> None:
         self.members = members
 
-    def add_transactions(self, transactions: List[Transaction]) -> None:
+    def add_transactions(self, transactions: list[Transaction]) -> None:
         """Add a list of transactions to the appropriate members."""
         for t in transactions:
             for p in self.members:
@@ -136,19 +139,21 @@ class Group:
         return max(dates)
 
     def get_expenses_difference(
-        self, p1: Person, p2: Person, category: Optional[Category] = None
-    ) -> float:
+        self, p1: Person, p2: Person, category: Category | None = None
+    ) -> Decimal:
         """Calculate the difference in expenses between two people."""
         missing = [p for p in [p1, p2] if p not in self.members]
         if missing:
             raise ValueError("People args missing from group")
         return p1.get_expenses(category) - p2.get_expenses(category)
 
-    def get_expenses(self) -> float:
+    def get_expenses(self) -> Decimal:
         """Calculate the total expenses of the group."""
-        return sum(p.get_expenses() for p in self.members)
+        return sum((p.get_expenses() for p in self.members), start=Decimal("0.00"))
 
-    def get_debt(self, p1: Person, p2: Person, p1_scale_factor: float = 0.5) -> float:
+    def get_debt(
+        self, p1: Person, p2: Person, p1_scale_factor: Decimal = Decimal("0.5")
+    ) -> Decimal:
         """Calculate how much p1 owes p2 based on a scale factor."""
         missing = [p for p in [p1, p2] if p not in self.members]
         if missing:
