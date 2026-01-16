@@ -18,10 +18,24 @@ CONTAINER_NAME = "csv-uploads"
 
 def _get_blob_service_client() -> BlobServiceClient:
     """Returns a BlobServiceClient."""
+    credential = DefaultAzureCredential()
+
+    # 1. Prefer explicit Blob Service URL (Local Dev / Azurite)
+    blob_service_url = os.environ.get("BLOB_SERVICE_URL")
+
+    if blob_service_url:
+        if blob_service_url.startswith("http://"):
+            # Azurite well-known credentials
+            return BlobServiceClient(
+                account_url=blob_service_url,
+                credential="Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
+            )
+        return BlobServiceClient(account_url=blob_service_url, credential=credential)
+
+    # 2. Fallback to STORAGE_ACCOUNT_URL (Production)
     if not STORAGE_ACCOUNT_URL:
         raise ValueError("STORAGE_ACCOUNT_URL environment variable is not set.")
 
-    credential = DefaultAzureCredential()
     return BlobServiceClient(account_url=STORAGE_ACCOUNT_URL, credential=credential)
 
 

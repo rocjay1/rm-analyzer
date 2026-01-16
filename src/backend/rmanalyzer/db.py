@@ -12,6 +12,8 @@ from typing import Any
 
 from azure.data.tables import TableClient, TableTransactionError, UpdateMode
 from azure.identity import DefaultAzureCredential
+from azure.core.credentials import AzureNamedKeyCredential
+
 
 from .models import Transaction
 
@@ -27,19 +29,39 @@ SAVINGS_TABLE = "savings"
 
 def _get_table_client(table_name: str) -> TableClient:
     """Returns a TableClient, ensuring the table exists."""
-    if not STORAGE_ACCOUNT_URL:
-        raise ValueError("STORAGE_ACCOUNT_URL environment variable is not set.")
-
     credential = DefaultAzureCredential()
 
-    # Construct the table endpoint URL safely
-    # STORAGE_ACCOUNT_URL is like "https://<account>.blob.core.windows.net/"
-    # We need "https://<account>.table.core.windows.net/"
-    table_endpoint = STORAGE_ACCOUNT_URL.replace(".blob.", ".table.")
+    # 1. Prefer explicit Table Service URL (Local Dev / Azurite)
+    table_service_url = os.environ.get("TABLE_SERVICE_URL")
 
-    client = TableClient(
-        endpoint=table_endpoint, table_name=table_name, credential=credential
-    )
+    if table_service_url:
+        # For local HTTP (Azurite), use the well-known account name/key
+        if table_service_url.startswith("http://"):
+            # Azurite well-known credentials
+            client = TableClient(
+                endpoint=table_service_url,
+                table_name=table_name,
+                credential=AzureNamedKeyCredential(
+                    "devstoreaccount1",
+                    "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
+                ),
+            )
+        else:
+            client = TableClient(
+                endpoint=table_service_url, table_name=table_name, credential=credential
+            )
+    elif STORAGE_ACCOUNT_URL:
+        # 2. Fallback to constructing from Blob URL (Production)
+        # STORAGE_ACCOUNT_URL is like "https://<account>.blob.core.windows.net/"
+        # We need "https://<account>.table.core.windows.net/"
+        table_endpoint = STORAGE_ACCOUNT_URL.replace(".blob.", ".table.")
+        client = TableClient(
+            endpoint=table_endpoint, table_name=table_name, credential=credential
+        )
+    else:
+        raise ValueError(
+            "Neither TABLE_SERVICE_URL nor RM_ANALYZER_STORAGE_ACCOUNT_URL environment variable is set."
+        )
 
     try:
         client.create_table()

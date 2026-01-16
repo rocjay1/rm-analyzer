@@ -21,10 +21,27 @@ QUEUE_NAME = "csv-processing"
 
 def _get_queue_client() -> QueueClient:
     """Returns a QueueClient."""
+    credential = DefaultAzureCredential()
+
+    # 1. Prefer explicit Queue Service URL (Local Dev / Azurite)
+    queue_service_url = os.environ.get("QUEUE_SERVICE_URL")
+
+    if queue_service_url:
+        if queue_service_url.startswith("http://"):
+            # Azurite well-known credentials
+            return QueueClient(
+                account_url=queue_service_url,
+                queue_name=QUEUE_NAME,
+                credential="Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
+            )
+        return QueueClient(
+            account_url=queue_service_url, queue_name=QUEUE_NAME, credential=credential
+        )
+
+    # 2. Fallback to constructing from Blob URL (Production)
     if not STORAGE_ACCOUNT_URL:
         raise ValueError("STORAGE_ACCOUNT_URL environment variable is not set.")
 
-    credential = DefaultAzureCredential()
     # Construct the queue endpoint URL safely
     queue_endpoint = STORAGE_ACCOUNT_URL.replace(".blob.", ".queue.")
 

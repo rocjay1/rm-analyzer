@@ -18,6 +18,9 @@ env/
 local.settings.json
 .func/
 
+# Azurite
+.azurite/
+
 # VS Code
 .vscode/
 

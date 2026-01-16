@@ -16,7 +16,18 @@ jobs:
     environment: production
     timeout-minutes: 15
     steps:
+
       - uses: actions/checkout@v4
+
+      - name: Configure SWA for Production
+        run: |
+          if [ -f src/frontend/staticwebapp-prd.config.json ]; then
+            echo "Copying production config..."
+            cp src/frontend/staticwebapp-prd.config.json src/frontend/staticwebapp.config.json
+          else
+            echo "Error: src/frontend/staticwebapp-prd.config.json not found!"
+            exit 1
+          fi
       
       - name: Deploy to Azure Static Web App
         uses: Azure/static-web-apps-deploy@v1
