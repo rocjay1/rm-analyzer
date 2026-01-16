@@ -3,13 +3,12 @@ Tests for the Azure Function App.
 """
 
 import unittest
-from datetime import date
 from unittest.mock import MagicMock, patch
 
 import azure.functions as func
-import function_app
-from function_app import upload_and_analyze
-from rmanalyzer.models import Category, IgnoredFrom, Transaction
+
+from function_app import upload
+from rmanalyzer.controllers import get_config
 
 
 class TestFunctionApp(unittest.TestCase):
@@ -27,72 +26,38 @@ class TestFunctionApp(unittest.TestCase):
             b"2025-08-17,Test,123,42.5,Dining & Drinks,everything"
         )
 
-        # Reset config cache
-        # pylint: disable=protected-access
-        function_app._CONFIG_CACHE = None
+        # Clear lru_cache for get_config
+        get_config.cache_clear()
 
     def test_unauthorized(self):
         """Test that unauthorized requests return 401."""
         self.req.headers = {}
-        resp = upload_and_analyze(self.req)
+        resp = upload(self.req)
         self.assertEqual(resp.status_code, 401)
 
     def test_no_file(self):
         """Test that requests with no file return 400."""
         self.req.files = {}
-        resp = upload_and_analyze(self.req)
+        resp = upload(self.req)
         self.assertEqual(resp.status_code, 400)
 
-    @patch("function_app.os.path.exists")
-    def test_config_missing(self, mock_exists):
-        """Test that missing config returns 500."""
-        mock_exists.return_value = False
-        resp = upload_and_analyze(self.req)
-        self.assertEqual(resp.status_code, 500)
-
-    @patch("function_app.os.path.exists")
-    @patch("builtins.open")
-    @patch("function_app.json.load")
-    @patch("function_app.validate_config")
-    @patch("function_app.get_transactions")
-    @patch("function_app.SummaryEmail")
-    # pylint: disable=too-many-arguments, too-many-positional-arguments
-    def test_success(
+    @patch("rmanalyzer.controllers.get_config")
+    @patch("rmanalyzer.blob_storage.upload_csv")
+    @patch("rmanalyzer.queue_utils.enqueue_message")
+    def test_success_async(
         self,
-        mock_email,
-        mock_get_trans,
-        _mock_validate,
-        mock_json_load,
-        _mock_open,
-        mock_exists,
+        mock_enqueue,
+        mock_upload,
+        _mock_get_config,
     ):
-        """Test successful execution."""
-        mock_exists.return_value = True
-        mock_json_load.return_value = {
-            "People": [
-                {"Name": "Alice", "Email": "alice@example.com", "Accounts": [123]}
-            ],
-            "SenderEmail": "sender@example.com",
-        }
+        """Test successful async upload (202 Accepted)."""
+        mock_upload.return_value = "https://example.com/blob.csv"
 
-        # Mock transaction that matches the person's account (123) and is not ignored
-        t = Transaction(
-            date(2025, 8, 17), "Test", 123, 42.5, Category.DINING, IgnoredFrom.NOTHING
-        )
-        # Mock return value of get_transactions to return (transactions, errors) tuple
-        mock_get_trans.return_value = ([t], [])
+        resp = upload(self.req)
 
-        resp = upload_and_analyze(self.req)
-
-        self.assertEqual(resp.status_code, 200)
-        mock_email.return_value.send.assert_called_once()
-
-        # Verify caching by calling again
-        resp2 = upload_and_analyze(self.req)
-        self.assertEqual(resp2.status_code, 200)
-
-        # json.load should have been called ONCE.
-        self.assertEqual(mock_json_load.call_count, 1)
+        self.assertEqual(resp.status_code, 202)
+        mock_upload.assert_called_once()
+        mock_enqueue.assert_called_once()
 
 
 if __name__ == "__main__":
