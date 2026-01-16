@@ -5,6 +5,7 @@ Tests for the emailer module.
 import os
 import unittest
 from datetime import date
+from decimal import Decimal
 from unittest.mock import patch
 
 from rmanalyzer.emailer import SummaryEmail
@@ -17,7 +18,12 @@ class TestEmailer(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.t1 = Transaction(
-            date(2025, 8, 1), "A", 1, 10.0, Category.DINING, IgnoredFrom.NOTHING
+            date(2025, 8, 1),
+            "A",
+            1,
+            Decimal("10.0"),
+            Category.DINING,
+            IgnoredFrom.NOTHING,
         )
         self.p1 = Person("Alice", "alice@example.com", [1], [self.t1])
         self.p2 = Person("Bob", "bob@example.com", [2], [])

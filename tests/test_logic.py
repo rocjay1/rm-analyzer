@@ -4,10 +4,10 @@ Tests for the business logic (models and transactions).
 
 import unittest
 from datetime import date
+from decimal import Decimal
 
 from rmanalyzer.models import Category, Group, IgnoredFrom, Person, Transaction
-from rmanalyzer.transactions import (get_transactions, to_currency,
-                                     to_transaction)
+from rmanalyzer.transactions import get_transactions, to_currency, to_transaction
 
 
 class TestTransactionHelpers(unittest.TestCase):
@@ -28,7 +28,7 @@ class TestTransactionHelpers(unittest.TestCase):
         self.assertIsNone(err)
         self.assertEqual(t.name, "Test")
         self.assertEqual(t.account_number, 123)
-        self.assertEqual(t.amount, 42.5)
+        self.assertEqual(t.amount, Decimal("42.5"))
         self.assertEqual(t.category, Category.DINING)
         self.assertEqual(t.ignore, IgnoredFrom.EVERYTHING)
 
@@ -116,13 +116,28 @@ class TestPersonGroup(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.t1 = Transaction(
-            date(2025, 8, 1), "A", 1, 10.0, Category.DINING, IgnoredFrom.NOTHING
+            date(2025, 8, 1),
+            "A",
+            1,
+            Decimal("10.0"),
+            Category.DINING,
+            IgnoredFrom.NOTHING,
         )
         self.t2 = Transaction(
-            date(2025, 8, 2), "B", 1, 20.0, Category.GROCERIES, IgnoredFrom.NOTHING
+            date(2025, 8, 2),
+            "B",
+            1,
+            Decimal("20.0"),
+            Category.GROCERIES,
+            IgnoredFrom.NOTHING,
         )
         self.t3 = Transaction(
-            date(2025, 8, 3), "C", 2, 30.0, Category.DINING, IgnoredFrom.NOTHING
+            date(2025, 8, 3),
+            "C",
+            2,
+            Decimal("30.0"),
+            Category.DINING,
+            IgnoredFrom.NOTHING,
         )
         self.p1 = Person("Alice", "alice@example.com", [1], [self.t1, self.t2])
         self.p2 = Person("Bob", "bob@example.com", [2], [self.t3])
@@ -130,23 +145,28 @@ class TestPersonGroup(unittest.TestCase):
 
     def test_person_expenses(self):
         """Test calculating person expenses."""
-        self.assertEqual(self.p1.get_expenses(), 30.0)
-        self.assertEqual(self.p2.get_expenses(), 30.0)
-        self.assertEqual(self.p1.get_expenses(Category.DINING), 10.0)
-        self.assertEqual(self.p2.get_expenses(Category.DINING), 30.0)
+        self.assertEqual(self.p1.get_expenses(), Decimal("30.0"))
+        self.assertEqual(self.p2.get_expenses(), Decimal("30.0"))
+        self.assertEqual(self.p1.get_expenses(Category.DINING), Decimal("10.0"))
+        self.assertEqual(self.p2.get_expenses(Category.DINING), Decimal("30.0"))
 
     def test_group_expenses(self):
         """Test calculating group expenses."""
-        self.assertEqual(self.group.get_expenses(), 60.0)
+        self.assertEqual(self.group.get_expenses(), Decimal("60.0"))
         diff = self.group.get_expenses_difference(self.p1, self.p2)
-        self.assertEqual(diff, 0.0)
-        debt = self.group.get_debt(self.p1, self.p2, 0.5)
-        self.assertEqual(debt, 0.0)
+        self.assertEqual(diff, Decimal("0.0"))
+        debt = self.group.get_debt(self.p1, self.p2, Decimal("0.5"))
+        self.assertEqual(debt, Decimal("0.0"))
 
     def test_group_add_transactions(self):
         """Test adding transactions to a group."""
         t4 = Transaction(
-            date(2025, 8, 4), "D", 1, 5.0, Category.DINING, IgnoredFrom.NOTHING
+            date(2025, 8, 4),
+            "D",
+            1,
+            Decimal("5.0"),
+            Category.DINING,
+            IgnoredFrom.NOTHING,
         )
         self.group.add_transactions([t4])
         self.assertIn(t4, self.p1.transactions)
