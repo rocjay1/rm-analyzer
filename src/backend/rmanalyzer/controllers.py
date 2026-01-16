@@ -1,11 +1,10 @@
+import functools
 import json
 import logging
 import os
-import functools
 from datetime import datetime
 
 import azure.functions as func
-
 from rmanalyzer import blob_storage, db, queue_utils
 from rmanalyzer.config import get_config_from_str, validate_config
 from rmanalyzer.emailer import SummaryEmail

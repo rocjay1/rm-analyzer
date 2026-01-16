@@ -2,11 +2,11 @@
 Database module for Azure Table Storage integration.
 """
 
+import collections
 import hashlib
 import logging
 import os
 import uuid
-import collections
 from datetime import datetime
 from typing import Any
 

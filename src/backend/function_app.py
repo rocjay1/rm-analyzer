@@ -3,7 +3,6 @@ Azure Function App entry point for RMAnalyzer.
 """
 
 import azure.functions as func
-
 from rmanalyzer import controllers, queue_utils
 
 app = func.FunctionApp()
