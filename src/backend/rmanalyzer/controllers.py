@@ -1,3 +1,7 @@
+"""
+Controllers for handling application logic.
+"""
+
 import functools
 import json
 import logging
