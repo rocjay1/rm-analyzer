@@ -38,7 +38,7 @@ def get_config() -> dict:
         try:
             with open(CONFIG_PATH, "r", encoding="utf-8") as f:
                 config = json.load(f)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             logging.error("Failed to load local config file: %s", e)
 
     if config is None:
@@ -161,7 +161,7 @@ def process_queue_item(msg: func.QueueMessage) -> None:
         # 4. Save to DB
         try:
             db.save_transactions(transactions)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             logging.error("Failed to save transactions to DB: %s", e)
 
         # 5. Email
