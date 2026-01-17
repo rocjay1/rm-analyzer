@@ -1,3 +1,7 @@
+* {
+    box-sizing: border-box;
+}
+
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     max-width: 900px;
@@ -166,6 +170,60 @@ td {
     margin-bottom: 20px;
 }
 
+.mr-10 {
+    margin-right: 10px;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.label-bold {
+    font-weight: bold;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.result-box {
+    background-color: #f3f2f1;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+    font-size: 1.2em;
+    font-weight: bold;
+    text-align: right;
+}
+
+.result-box span {
+    color: #0078d4;
+}
+
+.actions-row {
+    margin-top: 30px;
+    text-align: right;
+}
+
+.status-msg {
+    margin-right: 15px;
+    font-size: 0.9em;
+    color: #666;
+}
+
+/* Responsive Table Placeholders - layout handled by media query, but good to have base if needed */
+.responsive-table th.col-item {
+    width: 40%;
+}
+
+.responsive-table th.col-amount {
+    width: 30%;
+}
+
+.responsive-table th.col-action {
+    width: 10%;
+}
+
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
 
@@ -232,13 +290,9 @@ td {
     input[type="month"],
     select {
         width: 100%;
-        box-sizing: border-box;
-        /* Ensure padding doesn't overflow width */
-        padding: 10px;
-        /* Larger touch target */
         margin-bottom: 10px;
+        padding: 10px;
         font-size: 16px;
-        /* Prevent iOS zoom on focus */
     }
 
     /* Table Adjustments (Savings Page) */
@@ -269,24 +323,21 @@ td {
         border: none;
         border-bottom: 1px solid #eee;
         position: relative;
-        padding-left: 0;
-        padding-right: 0;
-        padding-top: 25px;
-        /* Space for label */
+        padding: 35px 10px 10px 10px;
+        /* Space for label + prevent edge collision */
         display: flex;
         flex-direction: column;
     }
 
     td:before {
         position: absolute;
-        top: 6px;
-        left: 0;
-        width: 100%;
-        padding-right: 10px;
+        top: 8px;
+        left: 10px;
+        width: calc(100% - 20px);
         white-space: nowrap;
         font-weight: bold;
         color: #605e5c;
-        font-size: 0.85em;
+        font-size: 0.9em;
     }
 
     /* Add labels for specific columns */

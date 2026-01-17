@@ -13,29 +13,27 @@
 
     <div class="container">
         <!-- Header row for title (User info moved to nav) -->
-        <div class="header-row"
-            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div class="header-row">
             <h1>Savings Calculator</h1>
         </div>
 
-        <div style="margin-bottom: 20px; text-align: right;">
-            <label for="monthPicker" style="font-weight: bold; margin-right: 10px;">Select Month:</label>
+        <div class="form-group text-right">
+            <label for="monthPicker" class="label-bold mr-10">Select Month:</label>
             <input type="month" id="monthPicker">
         </div>
 
-        <div style="margin-bottom: 20px;">
-            <label for="startingBalance" style="font-weight: bold; display: block; margin-bottom: 8px;">Starting Balance
-                ($)</label>
+        <div class="form-group">
+            <label for="startingBalance" class="label-bold">Starting Balance ($)</label>
             <input type="number" id="startingBalance" step="0.01" placeholder="0.00">
         </div>
 
         <h3>Monthly Adjustments</h3>
-        <table id="costsTable">
+        <table id="costsTable" class="responsive-table">
             <thead>
                 <tr>
-                    <th style="width: 40%">Item</th>
-                    <th style="width: 30%">Amount ($)</th>
-                    <th style="width: 10%">Action</th>
+                    <th class="col-item">Item</th>
+                    <th class="col-amount">Amount ($)</th>
+                    <th class="col-action">Action</th>
                 </tr>
             </thead>
             <tbody id="costsBody">
@@ -45,13 +43,12 @@
 
         <button class="btn btn-secondary" id="addItemBtn">+ Add Item</button>
 
-        <div class="result-box"
-            style="background-color: #f3f2f1; padding: 20px; border-radius: 8px; margin-top: 20px; font-size: 1.2em; font-weight: bold; text-align: right;">
-            Savings Transfer: <span id="transferAmount" style="color: #0078d4;">$0.00</span>
+        <div class="result-box">
+            Savings Transfer: <span id="transferAmount">$0.00</span>
         </div>
 
-        <div style="margin-top: 30px; text-align: right;">
-            <span id="status" style="margin-right: 15px; font-size: 0.9em; color: #666;"></span>
+        <div class="actions-row">
+            <span id="status" class="status-msg"></span>
             <button class="btn" id="saveBtn">Save Changes</button>
         </div>
     </div>
