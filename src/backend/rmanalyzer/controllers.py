@@ -9,8 +9,7 @@ from datetime import datetime
 
 import azure.functions as func
 from rmanalyzer import blob_utils, db, queue_utils
-from rmanalyzer.emailer import SummaryEmail
-from rmanalyzer.mail_utils import send_email
+from rmanalyzer.emailer import SummaryEmail, send_email
 from rmanalyzer.models import Group, Person
 from rmanalyzer.transactions import get_transactions
 
