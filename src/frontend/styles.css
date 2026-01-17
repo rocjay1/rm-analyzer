@@ -17,7 +17,7 @@ body {
     align-items: center;
     height: 48px;
     margin-bottom: 30px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
 .nav-brand {
@@ -66,7 +66,7 @@ body {
     padding: 30px;
     border-radius: 4px;
     margin: 0 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 /* Buttons */
@@ -111,7 +111,7 @@ body {
 }
 
 /* Form Elements */
-input[type="text"], 
+input[type="text"],
 input[type="number"],
 input[type="file"] {
     padding: 6px 8px;
@@ -146,8 +146,170 @@ td {
 }
 
 /* Utilities */
-.text-danger { color: #d13438; }
-.text-primary { color: #0078d4; }
-.text-bold { font-weight: 600; }
-.mt-20 { margin-top: 20px; }
-.mb-20 { margin-bottom: 20px; }
+.text-danger {
+    color: #d13438;
+}
+
+.text-primary {
+    color: #0078d4;
+}
+
+.text-bold {
+    font-weight: 600;
+}
+
+.mt-20 {
+    margin-top: 20px;
+}
+
+.mb-20 {
+    margin-bottom: 20px;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+
+    /* Layout Adjustments */
+    .container {
+        margin: 10px;
+        padding: 15px;
+        width: auto;
+    }
+
+    /* Navbar Adjustments */
+    .navbar {
+        height: auto;
+        flex-direction: column;
+        padding: 10px;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .nav-links {
+        width: 100%;
+        justify-content: flex-start;
+        gap: 15px;
+        padding: 5px 0;
+        overflow-x: auto;
+        /* Allow scrolling if many links */
+    }
+
+    .nav-link {
+        padding: 8px 0;
+        font-size: 15px;
+        /* Slightly larger for touch */
+    }
+
+    .nav-user {
+        display: none;
+    }
+
+    /* Typography & Interactive Elements */
+    body {
+        font-size: 16px;
+        /* Base size for readability */
+    }
+
+    h1 {
+        font-size: 1.5rem;
+    }
+
+    h3 {
+        font-size: 1.2rem;
+    }
+
+    .btn {
+        width: 100%;
+        margin-bottom: 10px;
+        padding: 12px;
+        /* Larger touch target */
+        font-size: 16px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="file"],
+    input[type="month"],
+    select {
+        width: 100%;
+        box-sizing: border-box;
+        /* Ensure padding doesn't overflow width */
+        padding: 10px;
+        /* Larger touch target */
+        margin-bottom: 10px;
+        font-size: 16px;
+        /* Prevent iOS zoom on focus */
+    }
+
+    /* Table Adjustments (Savings Page) */
+    table,
+    thead,
+    tbody,
+    th,
+    td,
+    tr {
+        display: block;
+    }
+
+    thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+    }
+
+    tr {
+        border: 1px solid #ccc;
+        margin-bottom: 15px;
+        border-radius: 4px;
+        padding: 10px;
+        background: #fff;
+    }
+
+    td {
+        border: none;
+        border-bottom: 1px solid #eee;
+        position: relative;
+        padding-left: 0;
+        padding-right: 0;
+        padding-top: 25px;
+        /* Space for label */
+        display: flex;
+        flex-direction: column;
+    }
+
+    td:before {
+        position: absolute;
+        top: 6px;
+        left: 0;
+        width: 100%;
+        padding-right: 10px;
+        white-space: nowrap;
+        font-weight: bold;
+        color: #605e5c;
+        font-size: 0.85em;
+    }
+
+    /* Add labels for specific columns */
+    #costsTable td:nth-of-type(1):before {
+        content: "Item";
+    }
+
+    #costsTable td:nth-of-type(2):before {
+        content: "Amount ($)";
+    }
+
+    #costsTable td:nth-of-type(3):before {
+        content: "Action";
+    }
+
+    /* Remove border for last item */
+    td:last-child {
+        border-bottom: 0;
+    }
+
+    /* Result Box */
+    .result-box {
+        text-align: center !important;
+        font-size: 1.1em;
+    }
+}
