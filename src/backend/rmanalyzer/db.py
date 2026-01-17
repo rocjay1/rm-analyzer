@@ -14,7 +14,6 @@ from azure.core.credentials import AzureNamedKeyCredential
 from azure.data.tables import TableClient, TableTransactionError, UpdateMode
 from azure.identity import DefaultAzureCredential
 
-
 from .models import Transaction
 
 __all__ = ["save_transactions", "get_savings", "save_savings"]
