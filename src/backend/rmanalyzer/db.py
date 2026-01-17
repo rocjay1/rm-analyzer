@@ -171,6 +171,8 @@ def get_savings(month: str) -> dict[str, object]:
 def save_savings(month: str, data: dict[str, object]) -> None:
     """
     Saves savings data for a month using a batch transaction (Delete All + Insert All).
+    Attempts to use a single atomic transaction if operations <= 100.
+    Otherwise, splits into multiple batches (atomicity not guaranteed across batches).
     """
     client = _get_table_client(SAVINGS_TABLE)
 
@@ -221,13 +223,26 @@ def save_savings(month: str, data: dict[str, object]) -> None:
     if not operations:
         return
 
-    # 4. Submit transaction (chunking if necessary)
+    # 4. Submit transaction
     # Azure Table Batch is limited to 100 operations.
-    batch_size = 100
-    for i in range(0, len(operations), batch_size):
-        batch = operations[i : i + batch_size]
+    if len(operations) <= 100:
+        # Atomic Transaction
         try:
-            client.submit_transaction(batch)
+            client.submit_transaction(operations)
         except TableTransactionError as e:
-            logger.error("Failed to submit savings batch transaction: %s", e)
+            logger.error("Failed to submit atomic savings transaction: %s", e)
             raise e
+    else:
+        # Split Transaction (Loss of strict atomicity)
+        logger.warning(
+            "Savings save operation exceeds 100 items (%d). Splitting batches - atomicity not guaranteed.",
+            len(operations),
+        )
+        batch_size = 100
+        for i in range(0, len(operations), batch_size):
+            batch = operations[i : i + batch_size]
+            try:
+                client.submit_transaction(batch)
+            except TableTransactionError as e:
+                logger.error("Failed to submit savings batch chunk %d: %s", i, e)
+                raise e

@@ -54,67 +54,106 @@ async function loadData() {
 }
 
 function render() {
-    // Update inputs if they aren't the active element (to avoid cursor jumping)
+    // Sync Starting Balance Input
     const balanceInput = document.getElementById('startingBalance');
     if (document.activeElement !== balanceInput) {
-        balanceInput.value = state.startingBalance || '';
+        // Only update if value implies a change (loose equality might be enough, but strict is safer if types match)
+        // Convert to string to compare with input.value
+        const newVal = state.startingBalance === 0 ? '' : state.startingBalance;
+        if (balanceInput.value != newVal) {
+            balanceInput.value = newVal;
+        }
     }
 
-    // Render Table
     const tbody = document.getElementById('costsBody');
-    tbody.innerHTML = '';
+    const existingRows = tbody.children;
 
+    // 1. Sync Rows
     state.items.forEach((item, index) => {
-        const tr = document.createElement('tr');
+        let tr = existingRows[index];
 
-        // Name Cell
-        const tdName = document.createElement('td');
-        const inputName = document.createElement('input');
-        inputName.type = 'text';
-        inputName.className = 'item-name';
-        inputName.value = item.name || '';
-        inputName.placeholder = 'Expense Name';
-        inputName.oninput = (e) => handleItemChange(index, 'name', e.target.value);
-        tdName.appendChild(inputName);
+        if (!tr) {
+            // Create new row
+            tr = createRow(index, item);
+            tbody.appendChild(tr);
+        } else {
+            // Update existing row
+            // Check if we need to update listeners (index might strictly stay same, but if we reorder, helpful to update)
+            // But we don't support reordering yet.
 
-        // Cost Cell
-        const tdCost = document.createElement('td');
-        const inputCost = document.createElement('input');
-        inputCost.type = 'number';
-        inputCost.className = 'item-cost';
-        inputCost.value = item.cost || '';
-        inputCost.placeholder = '0.00';
-        inputCost.step = '0.01';
-        inputCost.oninput = (e) => handleItemChange(index, 'cost', e.target.value);
-        tdCost.appendChild(inputCost);
+            // Name Input
+            const nameInput = tr.querySelector('.item-name');
+            if (nameInput && document.activeElement !== nameInput) {
+                if (nameInput.value !== item.name) {
+                    nameInput.value = item.name || '';
+                }
+            }
+            // Ensure onclick handler uses correct index (if we delete from middle, indices shift)
+            // Ideally we re-attach handlers or use event delegation. 
+            // Re-attaching easiest for now without rewriting everything.
+            nameInput.oninput = (e) => handleItemChange(index, 'name', e.target.value);
 
-        // Action Cell
-        const tdAction = document.createElement('td');
-        const btnRemove = document.createElement('button');
-        btnRemove.className = 'btn btn-danger';
-        btnRemove.innerText = 'Remove';
-        btnRemove.onclick = () => handleRemoveItem(index);
-        tdAction.appendChild(btnRemove);
+            // Cost Input
+            const costInput = tr.querySelector('.item-cost');
+            if (costInput && document.activeElement !== costInput) {
+                if (costInput.value !== item.cost) {
+                    costInput.value = item.cost || '';
+                }
+            }
+            costInput.oninput = (e) => handleItemChange(index, 'cost', e.target.value);
 
-        tr.appendChild(tdName);
-        tr.appendChild(tdCost);
-        tr.appendChild(tdAction);
-
-        tbody.appendChild(tr);
+            // Remove Button
+            const btnRemove = tr.querySelector('.btn-danger');
+            btnRemove.onclick = () => handleRemoveItem(index);
+        }
     });
 
-    // Calculations
-    const totalCost = state.items.reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
-    const transfer = state.startingBalance - totalCost;
-
-    const transferEl = document.getElementById('transferAmount');
-    transferEl.innerText = `$${transfer.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-    if (transfer < 0) {
-        transferEl.style.color = '#d13438';
-    } else {
-        transferEl.style.color = '#0078d4';
+    // 2. Remove extra rows
+    while (existingRows.length > state.items.length) {
+        tbody.removeChild(existingRows[existingRows.length - 1]);
     }
+
+    // 3. Update Calculations
+    updateCalculations();
+}
+
+function createRow(index, item) {
+    const tr = document.createElement('tr');
+
+    // Name Cell
+    const tdName = document.createElement('td');
+    const inputName = document.createElement('input');
+    inputName.type = 'text';
+    inputName.className = 'item-name';
+    inputName.value = item.name || '';
+    inputName.placeholder = 'Expense Name';
+    inputName.oninput = (e) => handleItemChange(index, 'name', e.target.value);
+    tdName.appendChild(inputName);
+
+    // Cost Cell
+    const tdCost = document.createElement('td');
+    const inputCost = document.createElement('input');
+    inputCost.type = 'number';
+    inputCost.className = 'item-cost';
+    inputCost.value = item.cost || '';
+    inputCost.placeholder = '0.00';
+    inputCost.step = '0.01';
+    inputCost.oninput = (e) => handleItemChange(index, 'cost', e.target.value);
+    tdCost.appendChild(inputCost);
+
+    // Action Cell
+    const tdAction = document.createElement('td');
+    const btnRemove = document.createElement('button');
+    btnRemove.className = 'btn btn-danger';
+    btnRemove.innerText = 'Remove';
+    btnRemove.onclick = () => handleRemoveItem(index);
+    tdAction.appendChild(btnRemove);
+
+    tr.appendChild(tdName);
+    tr.appendChild(tdCost);
+    tr.appendChild(tdAction);
+
+    return tr;
 }
 
 // Event Handlers

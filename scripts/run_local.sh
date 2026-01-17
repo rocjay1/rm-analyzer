@@ -39,7 +39,6 @@ azurite --silent --location .azurite --debug .azurite/debug.log &
 
 echo "Starting Azure Functions Backend..."
 cd src/backend
-source .venv/bin/activate
 # Start Func in background
 func start --port 7071 &
 FUNC_PID=$!

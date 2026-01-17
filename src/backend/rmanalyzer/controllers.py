@@ -12,6 +12,7 @@ import azure.functions as func
 from rmanalyzer import blob_utils, db, queue_utils
 from rmanalyzer.config import get_config_from_str, validate_config
 from rmanalyzer.emailer import SummaryEmail
+from rmanalyzer.mail_utils import send_email
 from rmanalyzer.models import Group, Person
 from rmanalyzer.transactions import get_transactions
 
@@ -166,6 +167,34 @@ def process_queue_item(msg: func.QueueMessage) -> None:
         # We should probably log errors or email them.
         if errors and len(transactions) == 0:
             logging.error("CSV Validation Errors: %s", errors)
+
+            # Send Error Email
+            sender = os.environ.get("SENDER_EMAIL", config.get("SenderEmail"))
+            members = get_members(config["People"])
+            # Send to all members logic, or just first? Usually all members involved or a specific admin.
+            # Mirroring summary email logic: send to all members.
+            recipients = [p.email for p in members]
+
+            if sender and recipients:
+                subject = "RMAnalyzer - Upload Failed"
+                error_list = "".join([f"<li>{e}</li>" for e in errors])
+                body = f"""
+                <h3>Upload Failed</h3>
+                <p>The uploaded CSV could not be processed due to the following errors:</p>
+                <ul>{error_list}</ul>
+                """
+                try:
+                    # Get Endpoint
+                    endpoint = os.environ.get("COMMUNICATION_SERVICES_ENDPOINT")
+                    if endpoint:
+                        send_email(endpoint, sender, recipients, subject, body)
+                    else:
+                        logging.error(
+                            "COMMUNICATION_SERVICES_ENDPOINT not set, cannot send error email."
+                        )
+                except Exception as email_ex:
+                    logging.error("Failed to send error email: %s", email_ex)
+
             return
 
         # 4. Save to DB
