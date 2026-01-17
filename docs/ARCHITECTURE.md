@@ -36,7 +36,7 @@ This document describes the architecture of the `rm-analyzer` system, which is d
 * **Tech Stack**: Python, Azure Functions (HTTP Triggers)
 * **Responsibilities**:
   * `rmanalyzer.transactions`: Parsing and processing logic.
-  * `rmanalyzer.emailer`: Handling email notifications.
+  * `rmanalyzer.email`: Handling email notifications.
   * `rmanalyzer.azure_utils`: Integration with Azure services.
 
 ### 4.3 Infrastructure

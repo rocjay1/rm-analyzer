@@ -8,10 +8,9 @@ import os
 from datetime import datetime
 
 import azure.functions as func
-from rmanalyzer import blob_utils, db, queue_utils
-from rmanalyzer.emailer import SummaryEmail, send_email
-from rmanalyzer.models import Group, Person
-from rmanalyzer.transactions import get_transactions
+from rmanalyzer import db, storage
+from rmanalyzer.email import SummaryEmail, send_email
+from rmanalyzer.models import Group, Person, get_transactions
 
 __all__ = [
     "handle_upload_async",
@@ -106,11 +105,11 @@ def handle_upload_async(req: func.HttpRequest) -> func.HttpResponse:
         base_name = os.path.basename(filename)
         blob_name = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{base_name}"
 
-        blob_url = blob_utils.upload_csv(blob_name, content)
+        blob_url = storage.upload_csv(blob_name, content)
         logging.info("Uploaded blob: %s", blob_url)
 
         # 3. Enqueue Message
-        queue_utils.enqueue_message({"blob_name": blob_name})
+        storage.enqueue_message({"blob_name": blob_name})
         logging.info("Enqueued processing message for: %s", blob_name)
 
         return func.HttpResponse(
@@ -139,7 +138,7 @@ def process_queue_item(msg: func.QueueMessage) -> None:
             return
 
         # 1. Download CSV
-        csv_content = blob_utils.download_csv(blob_name)
+        csv_content = storage.download_csv(blob_name)
 
         # 2. Config Check (removed legacy file config)
         # We rely on DB for people and Env Vars for other settings now.

@@ -6,8 +6,16 @@ import unittest
 from datetime import date
 from decimal import Decimal
 
-from rmanalyzer.models import Category, Group, IgnoredFrom, Person, Transaction
-from rmanalyzer.transactions import get_transactions, to_currency, to_transaction
+from rmanalyzer.models import (
+    Category,
+    Group,
+    IgnoredFrom,
+    Person,
+    Transaction,
+    get_transactions,
+    to_currency,
+    to_transaction,
+)
 
 
 class TestTransactionHelpers(unittest.TestCase):

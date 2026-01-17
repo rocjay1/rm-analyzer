@@ -9,8 +9,7 @@ from azure.communication.email import EmailClient
 from azure.identity import DefaultAzureCredential
 import yattag
 
-from .models import Category, Group
-from .transactions import to_currency
+from .models import Category, Group, to_currency
 
 __all__ = ["SummaryEmail", "send_email"]
 

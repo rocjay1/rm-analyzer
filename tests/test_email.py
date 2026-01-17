@@ -8,7 +8,7 @@ from datetime import date
 from decimal import Decimal
 from unittest.mock import patch
 
-from rmanalyzer.emailer import SummaryEmail
+from rmanalyzer.email import SummaryEmail
 from rmanalyzer.models import Category, Group, IgnoredFrom, Person, Transaction
 
 
@@ -46,7 +46,7 @@ class TestEmailer(unittest.TestCase):
         self.assertIn("Transactions Summary", self.email.subject)
         self.assertIn("08/01/25", self.email.subject)
 
-    @patch("rmanalyzer.emailer.send_email")
+    @patch("rmanalyzer.email.send_email")
     @patch.dict(
         os.environ,
         {"COMMUNICATION_SERVICES_ENDPOINT": "https://test.communication.azure.com"},
@@ -65,7 +65,7 @@ class TestEmailer(unittest.TestCase):
             "Test Body",
         )
 
-    @patch("rmanalyzer.emailer.send_email")
+    @patch("rmanalyzer.email.send_email")
     def test_send_missing_env_var(self, _):
         """Test that sending fails when environment variable is missing."""
         # Ensure env var is not set
