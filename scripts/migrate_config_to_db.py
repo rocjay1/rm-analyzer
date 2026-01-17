@@ -18,13 +18,28 @@ CONFIG_PATH = os.path.join(
 
 
 def migrate():
-    if not os.path.exists(CONFIG_PATH):
-        logger.error("Config file not found at %s", CONFIG_PATH)
-        return
+    config = None
 
-    logger.info("Loading config from %s", CONFIG_PATH)
-    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-        config = json.load(f)
+    # 1. Try Environment Variable (CI / Production)
+    env_config = os.environ.get("APP_CONFIG_JSON")
+    if env_config:
+        try:
+            config = json.loads(env_config)
+            logger.info("Loaded config from APP_CONFIG_JSON")
+        except json.JSONDecodeError as e:
+            logger.error("Failed to parse APP_CONFIG_JSON: %s", e)
+
+    # 2. Try File (Local Dev)
+    if config is None:
+        if os.path.exists(CONFIG_PATH):
+            logger.info("Loading config from %s", CONFIG_PATH)
+            with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+                config = json.load(f)
+        else:
+            logger.error(
+                "Config file not found at %s and APP_CONFIG_JSON not set", CONFIG_PATH
+            )
+            return
 
     people = config.get("People", [])
     logger.info("Found %d people to migrate", len(people))
