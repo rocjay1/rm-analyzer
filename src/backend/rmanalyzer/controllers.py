@@ -94,6 +94,31 @@ def _get_uploaded_file_content(
     return filename, file_content, None
 
 
+def _send_error_email(sender: str, recipients: list[str], errors: list[str]) -> None:
+    """Helper to send an email with validation errors."""
+    if not sender or not recipients:
+        return
+
+    subject = "RMAnalyzer - Upload Failed"
+    error_list = "".join([f"<li>{e}</li>" for e in errors])
+    body = f"""
+    <h3>Upload Failed</h3>
+    <p>The uploaded CSV could not be processed due to the following errors:</p>
+    <ul>{error_list}</ul>
+    """
+    try:
+        # Get Endpoint
+        endpoint = os.environ.get("COMMUNICATION_SERVICES_ENDPOINT")
+        if endpoint:
+            send_email(endpoint, sender, recipients, subject, body)
+        else:
+            logging.error(
+                "COMMUNICATION_SERVICES_ENDPOINT not set, cannot send error email."
+            )
+    except Exception as email_ex:  # pylint: disable=broad-exception-caught
+        logging.error("Failed to send error email: %s", email_ex)
+
+
 def handle_upload_async(req: func.HttpRequest) -> func.HttpResponse:
     """
     Receives a CSV, uploads it to Blob Storage, and queues a processing message.
@@ -127,7 +152,7 @@ def handle_upload_async(req: func.HttpRequest) -> func.HttpResponse:
             status_code=202,
         )
 
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         logging.error("Error during async upload: %s", e)
         return func.HttpResponse(f"Upload Error: {str(e)}", status_code=500)
 
@@ -171,29 +196,11 @@ def process_queue_item(msg: func.QueueMessage) -> None:
             # Send Error Email
             sender = os.environ.get("SENDER_EMAIL", config.get("SenderEmail"))
             members = get_members(config["People"])
-            # Send to all members logic, or just first? Usually all members involved or a specific admin.
-            # Mirroring summary email logic: send to all members.
+            # Send to all members logic, mirroring summary email logic.
             recipients = [p.email for p in members]
 
-            if sender and recipients:
-                subject = "RMAnalyzer - Upload Failed"
-                error_list = "".join([f"<li>{e}</li>" for e in errors])
-                body = f"""
-                <h3>Upload Failed</h3>
-                <p>The uploaded CSV could not be processed due to the following errors:</p>
-                <ul>{error_list}</ul>
-                """
-                try:
-                    # Get Endpoint
-                    endpoint = os.environ.get("COMMUNICATION_SERVICES_ENDPOINT")
-                    if endpoint:
-                        send_email(endpoint, sender, recipients, subject, body)
-                    else:
-                        logging.error(
-                            "COMMUNICATION_SERVICES_ENDPOINT not set, cannot send error email."
-                        )
-                except Exception as email_ex:
-                    logging.error("Failed to send error email: %s", email_ex)
+            if sender:
+                _send_error_email(sender, recipients, errors)
 
             return
 
