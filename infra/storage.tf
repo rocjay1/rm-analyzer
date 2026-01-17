@@ -78,3 +78,10 @@ resource "azurerm_role_assignment" "tf_user_table_contributor" {
   role_definition_name = "Storage Table Data Contributor"
   principal_id         = data.azurerm_client_config.current.object_id
 }
+
+# Allow GitHub Actions to migrate table data
+resource "azurerm_role_assignment" "github_table_contributor" {
+  scope                = azurerm_storage_account.sa.id
+  role_definition_name = "Storage Table Data Contributor"
+  principal_id         = azuread_service_principal.github_actions.object_id
+}
