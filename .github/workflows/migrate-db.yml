@@ -31,7 +31,7 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Fetch Storage Connection String
+      - name: Fetch App Settings (Storage & Config)
         id: fetch-settings
         run: |
           # 1. Find Resource Group for the Function App
@@ -44,7 +44,7 @@ jobs:
           
           echo "Found Resource Group: $RESOURCE_GROUP"
 
-          # 2. Fetch the storage account URL from the Function App settings
+          # 2. Fetch the storage account URL
           STORAGE_ACCOUNT_URL=$(az functionapp config appsettings list \
             --name ${{ secrets.AZURE_FUNCTION_APP_NAME }} \
             --resource-group $RESOURCE_GROUP \
@@ -57,6 +57,23 @@ jobs:
           
           echo "::add-mask::$STORAGE_ACCOUNT_URL"
           echo "STORAGE_ACCOUNT_URL=$STORAGE_ACCOUNT_URL" >> $GITHUB_ENV
+
+          # 3. Fetch APP_CONFIG_JSON
+          APP_CONFIG_JSON=$(az functionapp config appsettings list \
+            --name ${{ secrets.AZURE_FUNCTION_APP_NAME }} \
+            --resource-group $RESOURCE_GROUP \
+            --query "[?name=='APP_CONFIG_JSON'].value" -o tsv)
+
+          if [ -z "$APP_CONFIG_JSON" ]; then
+            echo "Error: APP_CONFIG_JSON not found in Function App settings."
+            exit 1
+          fi
+
+          # Masking strictly sensitive parts is hard for JSON, but we can try masking the whole thing or rely on secrets scanning if it was a secret.
+          # For now, just set it as env var.
+          echo "APP_CONFIG_JSON<<EOF" >> $GITHUB_ENV
+          echo "$APP_CONFIG_JSON" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Run Migration Script
         env:
