@@ -10,9 +10,9 @@ import uuid
 from datetime import datetime
 from typing import Any
 
+from azure.core.credentials import AzureNamedKeyCredential
 from azure.data.tables import TableClient, TableTransactionError, UpdateMode
 from azure.identity import DefaultAzureCredential
-from azure.core.credentials import AzureNamedKeyCredential
 
 
 from .models import Transaction
