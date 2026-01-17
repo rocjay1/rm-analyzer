@@ -5,9 +5,9 @@ SummaryEmail class for RMAnalyzer.
 import logging
 import os
 
+import yattag
 from azure.communication.email import EmailClient
 from azure.identity import DefaultAzureCredential
-import yattag
 
 from .models import Category, Group, to_currency
 
