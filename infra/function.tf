@@ -52,7 +52,6 @@ resource "azurerm_function_app_flex_consumption" "app" {
     "COMMUNICATION_SERVICES_ENDPOINT" = replace(regex("endpoint=[^;]+", azurerm_communication_service.comm_svc.primary_connection_string), "endpoint=", "")
     "SENDER_EMAIL"                    = "DoNotReply@${azurerm_email_communication_service_domain.domain.from_sender_domain}"
     "BUILD_FLAGS"                     = "UseElf"
-    "APP_CONFIG_JSON"                 = file("../src/backend/config.json")
   }
 }
 
