@@ -4,7 +4,7 @@
 		{
 			"label": "start local environment",
 			"type": "shell",
-			"command": "./scripts/run_local.sh",
+			"command": "source ./.venv/bin/activate && ./scripts/run_local.sh",
 			"isBackground": false,
 			"presentation": {
 				"echo": true,
