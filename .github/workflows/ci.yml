@@ -32,13 +32,13 @@ jobs:
     - name: Import Sort Check (isort)
       run: isort --check src/backend
 
-    - name: Lint with pylint
+    - name: Lint (pylint)
       run: |
         # Run pylint on the backend source code
         # Using the configuration from .pylintrc if it exists in src/backend
         pylint --rcfile=src/backend/.pylintrc src/backend
 
-    - name: Test with pytest
+    - name: Test (pytest)
       run: |
         # Add src/backend to PYTHONPATH so tests can import modules
         export PYTHONPATH=$PYTHONPATH:$(pwd)/src/backend

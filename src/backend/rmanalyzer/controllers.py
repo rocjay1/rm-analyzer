@@ -185,6 +185,10 @@ def process_queue_item(msg: func.QueueMessage) -> None:
         # 3. Analysis
         transactions, errors = get_transactions(csv_content)
 
+        # Retrieve People from DB
+        people_data = db.get_all_people()
+        members = get_members(people_data)
+
         # If critical errors (e.g. empty file), we might stop.
         # But for row errors, we might still proceed with valid ones?
         # Current logic: if ANY errors, we abort email?
@@ -194,13 +198,17 @@ def process_queue_item(msg: func.QueueMessage) -> None:
             logging.error("CSV Validation Errors: %s", errors)
 
             # Send Error Email
-            sender = os.environ.get("SENDER_EMAIL", config.get("SenderEmail"))
-            members = get_members(config["People"])
+            sender = os.environ.get("SENDER_EMAIL")
+            if not sender and config:
+                sender = config.get("SenderEmail")
+
             # Send to all members logic, mirroring summary email logic.
             recipients = [p.email for p in members]
 
             if sender:
                 _send_error_email(sender, recipients, errors)
+            else:
+                logging.error("Sender email not configured, cannot send error email.")
 
             return
 
@@ -211,7 +219,7 @@ def process_queue_item(msg: func.QueueMessage) -> None:
             logging.error("Failed to save transactions to DB: %s", e)
 
         # 5. Email
-        members = get_members(config["People"])
+        # Re-using members fetched above
         group = Group(members)
         group.add_transactions(transactions)
 
@@ -219,7 +227,10 @@ def process_queue_item(msg: func.QueueMessage) -> None:
             logging.warning("No valid transactions found for configured accounts.")
             return
 
-        sender = os.environ.get("SENDER_EMAIL", config.get("SenderEmail"))
+        sender = os.environ.get("SENDER_EMAIL")
+        if not sender and config:
+            sender = config.get("SenderEmail")
+
         if not sender:
             logging.error("Sender email not configured.")
             return

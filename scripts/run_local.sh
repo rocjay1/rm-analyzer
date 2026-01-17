@@ -71,4 +71,3 @@ echo "API Route: http://localhost:7071"
 swa start . --api-location http://localhost:7071
 
 # Wait for func to exit (if swa exits, trap will kill func)
-

@@ -4,6 +4,7 @@ Database module for Azure Table Storage integration.
 
 import collections
 import hashlib
+import json
 import logging
 import os
 import uuid
@@ -16,7 +17,13 @@ from azure.identity import DefaultAzureCredential
 
 from .models import Transaction
 
-__all__ = ["save_transactions", "get_savings", "save_savings"]
+__all__ = [
+    "save_transactions",
+    "get_savings",
+    "save_savings",
+    "save_person",
+    "get_all_people",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +31,7 @@ logger = logging.getLogger(__name__)
 STORAGE_ACCOUNT_URL = os.environ.get("STORAGE_ACCOUNT_URL")
 TRANSACTIONS_TABLE = "transactions"
 SAVINGS_TABLE = "savings"
+PEOPLE_TABLE = "people"
 
 
 def _get_table_client(table_name: str) -> TableClient:
@@ -245,3 +253,52 @@ def save_savings(month: str, data: dict[str, object]) -> None:
             except TableTransactionError as e:
                 logger.error("Failed to submit savings batch chunk %d: %s", i, e)
                 raise e
+
+
+def save_person(person: dict) -> None:
+    """
+    Saves a person to the People table.
+    person dict must have: Name, Email, Accounts (list[int]).
+    """
+    client = _get_table_client(PEOPLE_TABLE)
+
+    entity = {
+        "PartitionKey": "PEOPLE",
+        "RowKey": person["Email"],
+        "Name": person["Name"],
+        "Email": person["Email"],
+        # Azure Tables doesn't support lists, store as JSON string
+        "Accounts": json.dumps(person["Accounts"]),
+    }
+
+    try:
+        client.upsert_entity(entity, mode=UpdateMode.REPLACE)
+    except Exception as e:
+        logger.error("Failed to save person %s: %s", person["Email"], e)
+        raise e
+
+
+def get_all_people() -> list[dict]:
+    """
+    Retrieves all people from the database.
+    Returns a list of dicts with keys: Name, Email, Accounts (list[int]).
+    """
+    client = _get_table_client(PEOPLE_TABLE)
+    people = []
+
+    try:
+        entities = client.query_entities(query_filter="PartitionKey eq 'PEOPLE'")
+        for entity in entities:
+            people.append(
+                {
+                    "Name": entity.get("Name"),
+                    "Email": entity.get("Email", entity["RowKey"]),
+                    "Accounts": json.loads(entity.get("Accounts", "[]")),
+                }
+            )
+    except Exception as e:
+        logger.error("Failed to retrieve people: %s", e)
+        # If table doesn't exist or empty, return empty list is acceptable
+        return []
+
+    return people
