@@ -8,7 +8,6 @@ from unittest.mock import MagicMock, patch
 import azure.functions as func
 
 from function_app import upload
-from rmanalyzer.controllers import get_config
 
 
 class TestFunctionApp(unittest.TestCase):
@@ -26,9 +25,6 @@ class TestFunctionApp(unittest.TestCase):
             b"2025-08-17,Test,123,42.5,Dining & Drinks,everything"
         )
 
-        # Clear lru_cache for get_config
-        get_config.cache_clear()
-
     def test_unauthorized(self):
         """Test that unauthorized requests return 401."""
         self.req.headers = {}
@@ -41,14 +37,12 @@ class TestFunctionApp(unittest.TestCase):
         resp = upload(self.req)
         self.assertEqual(resp.status_code, 400)
 
-    @patch("rmanalyzer.controllers.get_config")
     @patch("rmanalyzer.blob_utils.upload_csv")
     @patch("rmanalyzer.queue_utils.enqueue_message")
     def test_success_async(
         self,
         mock_enqueue,
         mock_upload,
-        _mock_get_config,
     ):
         """Test successful async upload (202 Accepted)."""
         mock_upload.return_value = "https://example.com/blob.csv"

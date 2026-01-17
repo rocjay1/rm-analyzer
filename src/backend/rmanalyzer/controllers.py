@@ -2,7 +2,6 @@
 Controllers for handling application logic.
 """
 
-import functools
 import json
 import logging
 import os
@@ -10,7 +9,6 @@ from datetime import datetime
 
 import azure.functions as func
 from rmanalyzer import blob_utils, db, queue_utils
-from rmanalyzer.config import get_config_from_str, validate_config
 from rmanalyzer.emailer import SummaryEmail
 from rmanalyzer.mail_utils import send_email
 from rmanalyzer.models import Group, Person
@@ -20,45 +18,14 @@ __all__ = [
     "handle_upload_async",
     "handle_savings_dbrequest",
     "process_queue_item",
-    "get_config",
     "get_members",
 ]
 
 logger = logging.getLogger(__name__)
 
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config.json")
 
 # Limit file size to 10MB to prevent DoS
 MAX_FILE_SIZE = 10 * 1024 * 1024
-
-
-@functools.lru_cache(maxsize=1)
-def get_config() -> dict:
-    """Load and validate configuration, using cache if available."""
-    config = None
-    # Try Environment Variable (Production)
-    env_config = os.environ.get("APP_CONFIG_JSON")
-    if env_config:
-        try:
-            config = get_config_from_str(env_config)
-        except json.JSONDecodeError as e:
-            logging.error("Failed to parse APP_CONFIG_JSON: %s", e)
-
-    # Try File (Local Dev) if env var failed or not set
-    if config is None and os.path.exists(CONFIG_PATH):
-        try:
-            with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-                config = json.load(f)
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            logging.error("Failed to load local config file: %s", e)
-
-    if config is None:
-        raise FileNotFoundError(
-            "Configuration file not found on server (and APP_CONFIG_JSON not set)."
-        )
-
-    validate_config(config)
-    return config
 
 
 def get_members(people_config: list[dict]) -> list[Person]:
@@ -175,12 +142,8 @@ def process_queue_item(msg: func.QueueMessage) -> None:
         # 1. Download CSV
         csv_content = blob_utils.download_csv(blob_name)
 
-        # 2. Load Config
-        try:
-            config = get_config()
-        except FileNotFoundError:
-            logging.error("Configuration file not found.")
-            return
+        # 2. Config Check (removed legacy file config)
+        # We rely on DB for people and Env Vars for other settings now.
 
         # 3. Analysis
         transactions, errors = get_transactions(csv_content)
@@ -199,8 +162,6 @@ def process_queue_item(msg: func.QueueMessage) -> None:
 
             # Send Error Email
             sender = os.environ.get("SENDER_EMAIL")
-            if not sender and config:
-                sender = config.get("SenderEmail")
 
             # Send to all members logic, mirroring summary email logic.
             recipients = [p.email for p in members]
@@ -228,8 +189,6 @@ def process_queue_item(msg: func.QueueMessage) -> None:
             return
 
         sender = os.environ.get("SENDER_EMAIL")
-        if not sender and config:
-            sender = config.get("SenderEmail")
 
         if not sender:
             logging.error("Sender email not configured.")
