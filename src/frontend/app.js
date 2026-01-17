@@ -1,3 +1,5 @@
+import { renderNavbar } from './navbar.js';
+
 async function uploadFile() {
     const fileInput = document.getElementById('fileInput');
     const statusDiv = document.getElementById('status');
@@ -34,3 +36,11 @@ async function uploadFile() {
         btn.disabled = false;
     }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    renderNavbar();
+    const uploadBtn = document.getElementById('uploadBtn');
+    if (uploadBtn) {
+        uploadBtn.addEventListener('click', uploadFile);
+    }
+});

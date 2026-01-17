@@ -1,180 +1,216 @@
+import { renderNavbar } from './navbar.js';
+
+const state = {
+    month: '',
+    startingBalance: 0,
+    items: []
+};
+
+async function init() {
+    await renderNavbar();
+
+    // Initialize state
+    state.month = getCurrentMonth();
+
+    // Bind global events
+    document.getElementById('monthPicker').addEventListener('change', handleMonthChange);
+    document.getElementById('startingBalance').addEventListener('input', handleBalanceChange);
+    document.getElementById('addItemBtn').addEventListener('click', handleAddItem);
+    document.getElementById('saveBtn').addEventListener('click', handleSave);
+
+    // Initial UI sync
+    document.getElementById('monthPicker').value = state.month;
+
+    // Load data
+    await loadData();
+}
 
 async function loadData() {
-    const statusSpan = document.getElementById('status');
-    const saveBtn = document.getElementById('saveBtn');
-
-    // Get selected month or default to current
-    const monthPicker = document.getElementById('monthPicker');
-    if (!monthPicker.value) {
-        monthPicker.value = getCurrentMonth();
-    }
-    const selectedMonth = monthPicker.value;
-
-    // Disable save while loading
-    saveBtn.disabled = true;
-    statusSpan.innerText = 'Loading data...';
-
-    // Clear form immediately to prevent stale data
-    populateForm({});
-    recalculate();
+    updateStatus('Loading data...', true);
 
     try {
-        const response = await fetch(`/api/savings?month=${selectedMonth}`);
+        const response = await fetch(`/api/savings?month=${state.month}`);
         if (response.ok) {
             const data = await response.json();
-            populateForm(data);
-            recalculate();
-            statusSpan.innerText = '';
+            // Merge into state
+            state.startingBalance = data.startingBalance !== undefined ? data.startingBalance : 0;
+            state.items = Array.isArray(data.items) ? data.items : [];
+            updateStatus('');
         } else if (response.status === 404) {
-            // New month with no data - form is already cleared
-            statusSpan.innerText = '';
+            // Reset for new month
+            state.startingBalance = 0;
+            state.items = [];
+            updateStatus('');
         } else {
             console.error('Failed to load data', response.statusText);
-            statusSpan.innerText = 'Error loading data.';
+            updateStatus('Error loading data.');
         }
     } catch (error) {
         console.error('Error fetching data:', error);
-        statusSpan.innerText = 'Network error.';
-    } finally {
-        saveBtn.disabled = false;
-    }
-}
-
-function getCurrentMonth() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0'); // January is 0!
-    return `${year}-${month}`;
-}
-
-function populateForm(data) {
-    if (data.startingBalance !== undefined) {
-        document.getElementById('startingBalance').value = data.startingBalance;
-    } else {
-        document.getElementById('startingBalance').value = "";
+        updateStatus('Network error.');
     }
 
+    render();
+}
+
+function render() {
+    // Update inputs if they aren't the active element (to avoid cursor jumping)
+    const balanceInput = document.getElementById('startingBalance');
+    if (document.activeElement !== balanceInput) {
+        balanceInput.value = state.startingBalance || '';
+    }
+
+    // Render Table
     const tbody = document.getElementById('costsBody');
-    tbody.innerHTML = ''; // Clear existing
+    tbody.innerHTML = '';
 
-    if (data.items && Array.isArray(data.items)) {
-        data.items.forEach(item => addRow(item.name, item.cost));
-    }
-}
+    state.items.forEach((item, index) => {
+        const tr = document.createElement('tr');
 
-function addRow(name = '', cost = '') {
-    const tbody = document.getElementById('costsBody');
-    const tr = document.createElement('tr');
+        // Name Cell
+        const tdName = document.createElement('td');
+        const inputName = document.createElement('input');
+        inputName.type = 'text';
+        inputName.className = 'item-name';
+        inputName.value = item.name || '';
+        inputName.placeholder = 'Expense Name';
+        inputName.oninput = (e) => handleItemChange(index, 'name', e.target.value);
+        tdName.appendChild(inputName);
 
-    tr.innerHTML = `
-        <td><input type="text" class="item-name" value="${name}" placeholder="Expense Name" oninput="recalculate()"></td>
-        <td><input type="number" class="item-cost" value="${cost}" placeholder="0.00" step="0.01" oninput="recalculate()"></td>
-        <td><button class="btn btn-danger" onclick="removeRow(this)">Remove</button></td>
-    `;
-    tbody.appendChild(tr);
-    recalculate();
-}
+        // Cost Cell
+        const tdCost = document.createElement('td');
+        const inputCost = document.createElement('input');
+        inputCost.type = 'number';
+        inputCost.className = 'item-cost';
+        inputCost.value = item.cost || '';
+        inputCost.placeholder = '0.00';
+        inputCost.step = '0.01';
+        inputCost.oninput = (e) => handleItemChange(index, 'cost', e.target.value);
+        tdCost.appendChild(inputCost);
 
-function removeRow(btn) {
-    const row = btn.closest('tr');
-    row.remove();
-    recalculate();
-}
+        // Action Cell
+        const tdAction = document.createElement('td');
+        const btnRemove = document.createElement('button');
+        btnRemove.className = 'btn btn-danger';
+        btnRemove.innerText = 'Remove';
+        btnRemove.onclick = () => handleRemoveItem(index);
+        tdAction.appendChild(btnRemove);
 
-function recalculate() {
-    const startingBalanceCheck = parseFloat(document.getElementById('startingBalance').value);
-    const startingBalance = isNaN(startingBalanceCheck) ? 0 : startingBalanceCheck;
+        tr.appendChild(tdName);
+        tr.appendChild(tdCost);
+        tr.appendChild(tdAction);
 
-    const costs = document.querySelectorAll('.item-cost');
-    let totalCost = 0;
-    costs.forEach(input => {
-        const val = parseFloat(input.value);
-        if (!isNaN(val)) {
-            totalCost += val;
-        }
+        tbody.appendChild(tr);
     });
 
-    const transfer = startingBalance - totalCost;
+    // Calculations
+    const totalCost = state.items.reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
+    const transfer = state.startingBalance - totalCost;
 
     const transferEl = document.getElementById('transferAmount');
     transferEl.innerText = `$${transfer.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-    // Visual cue
     if (transfer < 0) {
-        transferEl.style.color = '#d13438'; // Red if negative
+        transferEl.style.color = '#d13438';
     } else {
-        transferEl.style.color = '#0078d4'; // Blue default
+        transferEl.style.color = '#0078d4';
     }
 }
 
-async function saveData() {
-    const statusSpan = document.getElementById('status');
-    const saveBtn = document.getElementById('saveBtn');
-    const monthPicker = document.getElementById('monthPicker');
+// Event Handlers
 
-    if (!monthPicker.value) {
-        statusSpan.innerText = 'Please select a month.';
+function handleMonthChange(e) {
+    state.month = e.target.value;
+    loadData();
+}
+
+function handleBalanceChange(e) {
+    state.startingBalance = parseFloat(e.target.value) || 0;
+    render(); // Re-render to update calculations
+}
+
+function handleAddItem() {
+    state.items.push({ name: '', cost: '' });
+    render();
+}
+
+function handleRemoveItem(index) {
+    state.items.splice(index, 1);
+    render();
+}
+
+function handleItemChange(index, field, value) {
+    state.items[index][field] = value;
+    // We don't call render() here to avoid losing focus/cursor position
+    // But we do need to update calculations
+    updateCalculations();
+}
+
+async function handleSave() {
+    if (!state.month) {
+        updateStatus('Please select a month.');
         return;
     }
 
-    saveBtn.disabled = true;
-    statusSpan.innerText = 'Saving...';
+    updateStatus('Saving...', true);
 
-    const startingBalance = parseFloat(document.getElementById('startingBalance').value) || 0;
-    const items = [];
-
-    document.querySelectorAll('#costsBody tr').forEach(row => {
-        const name = row.querySelector('.item-name').value;
-        const cost = parseFloat(row.querySelector('.item-cost').value) || 0;
-        if (name || cost) { // Only save non-empty rows
-            items.push({ name, cost });
-        }
-    });
-
+    // Filter out empty rows
     const payload = {
-        month: monthPicker.value,
-        startingBalance,
-        items
+        month: state.month,
+        startingBalance: state.startingBalance,
+        items: state.items.filter(i => i.name || i.cost)
     };
 
     try {
         const response = await fetch('/api/savings', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
 
         if (response.ok) {
-            statusSpan.innerText = 'Changes saved!';
-            setTimeout(() => { statusSpan.innerText = ''; }, 3000);
+            updateStatus('Changes saved!');
+            setTimeout(() => updateStatus(''), 3000);
         } else {
             const text = await response.text();
-            statusSpan.innerText = 'Save failed: ' + text;
+            updateStatus('Save failed: ' + text);
         }
     } catch (error) {
-        statusSpan.innerText = 'Error saving changes.';
+        updateStatus('Error saving changes.');
     } finally {
-        saveBtn.disabled = false;
+        document.getElementById('saveBtn').disabled = false;
     }
 }
 
-// Initialize on load
-document.addEventListener('DOMContentLoaded', () => {
-    // Function declarations are hoisted, so this reference is fine
-    const monthPicker = document.getElementById('monthPicker');
+// Helpers
 
-    // Set default if empty
-    if (!monthPicker.value) {
-        monthPicker.value = getCurrentMonth();
+function updateCalculations() {
+    const totalCost = state.items.reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
+    const transfer = state.startingBalance - totalCost;
+
+    const transferEl = document.getElementById('transferAmount');
+    transferEl.innerText = `$${transfer.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    if (transfer < 0) {
+        transferEl.style.color = '#d13438';
+    } else {
+        transferEl.style.color = '#0078d4';
     }
+}
 
-    // Global listener for starting balance changes
-    document.getElementById('startingBalance').addEventListener('input', recalculate);
-    // Listener for month changes
-    monthPicker.addEventListener('change', loadData);
+function updateStatus(msg, disableSave = false) {
+    const statusSpan = document.getElementById('status');
+    const saveBtn = document.getElementById('saveBtn');
 
-    // Initial load
-    loadData();
-});
+    statusSpan.innerText = msg;
+    saveBtn.disabled = disableSave;
+}
+
+function getCurrentMonth() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+}
+
+// Start
+document.addEventListener('DOMContentLoaded', init);

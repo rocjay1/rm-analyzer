@@ -1,4 +1,4 @@
-async function renderNavbar() {
+export async function renderNavbar() {
     // Inject font (optional, but good for style consistency)
     if (!document.querySelector('link[href*="segoe-ui"]')) {
         const fontLink = document.createElement('link');
@@ -41,6 +41,3 @@ async function updateNavUserInfo() {
         console.log('No auth info found (local dev?)');
     }
 }
-
-// Auto-render on load
-document.addEventListener('DOMContentLoaded', renderNavbar);
