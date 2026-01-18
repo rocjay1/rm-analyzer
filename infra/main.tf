@@ -6,7 +6,7 @@ resource "azurerm_resource_group" "rg" {
 resource "azurerm_consumption_budget_resource_group" "budget" {
   name              = "${var.project_name}-budget"
   resource_group_id = azurerm_resource_group.rg.id
-  amount            = 5
+  amount            = 6.5
   time_grain        = "Monthly"
 
   time_period {
