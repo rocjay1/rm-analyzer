@@ -203,6 +203,8 @@ td {
 .actions-row {
     margin-top: 30px;
     text-align: right;
+    display: grid;
+    place-items: center;
 }
 
 .status-msg {
@@ -226,6 +228,11 @@ td {
 
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
+
+    /* Text Alignment Adjustments */
+    .text-right {
+        text-align: start;
+    }
 
     /* Layout Adjustments */
     .container {
