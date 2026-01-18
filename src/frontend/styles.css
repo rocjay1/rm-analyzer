@@ -229,11 +229,6 @@ td {
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
 
-    /* Text Alignment Adjustments */
-    .text-right {
-        text-align: start;
-    }
-
     /* Layout Adjustments */
     .container {
         margin: 10px;
@@ -369,5 +364,10 @@ td {
     .result-box {
         text-align: center !important;
         font-size: 1.1em;
+    }
+
+    /* Text Alignment Adjustments */
+    .text-right {
+        text-align: center;
     }
 }
