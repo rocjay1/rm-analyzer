@@ -6,6 +6,12 @@
 # ensuring they ONLY get the signal when we explicitly kill them in cleanup().
 set -m
 
+# Activate virtual environment if it exists
+if [ -d ".venv" ]; then
+    echo "Activating virtual environment..."
+    source .venv/bin/activate
+fi
+
 # Helper to kill processes on specific ports
 kill_port() {
   local port=$1
@@ -23,7 +29,6 @@ kill_port 10000 # Azurite Blob
 kill_port 10001 # Azurite Queue
 kill_port 10002 # Azurite Table
 kill_port 4280  # SWA Emulator
-
 
 
 # Function to kill background processes on exit

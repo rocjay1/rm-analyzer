@@ -29,7 +29,7 @@ class TestSavingsDB(unittest.TestCase):
 
         # Check integrity of operations
         op_types = [op[0] for op in batch_args]
-        self.assertEqual(op_types, ["create", "create", "create"])
+        self.assertEqual(op_types, ["upsert", "create", "create"])
 
         # Check Summary
         summary = next(op[1] for op in batch_args if op[1]["RowKey"] == "SUMMARY")
@@ -70,6 +70,13 @@ class TestSavingsDB(unittest.TestCase):
         self.assertEqual(result["items"][0]["name"], "Utilities")
         self.assertEqual(result["items"][1]["cost"], 80.0)
 
+    def test_get_savings_returns_none_if_missing(self):
+        # Mock empty query result
+        self.mock_client.query_entities.return_value = []
+
+        result = db.get_savings("2026-02")
+        self.assertIsNone(result)
+
     def test_save_savings_deletes_existing(self):
         # Mock existing items
         self.mock_client.query_entities.return_value = [
@@ -81,9 +88,9 @@ class TestSavingsDB(unittest.TestCase):
 
         batch_args = self.mock_client.submit_transaction.call_args[0][0]
 
-        # Check that we have 2 deletes
+        # Check that we have 1 delete (SUMMARY is skipped)
         deletes = [op for op in batch_args if op[0] == "delete"]
-        self.assertEqual(len(deletes), 2)
+        self.assertEqual(len(deletes), 1)
 
 
 if __name__ == "__main__":

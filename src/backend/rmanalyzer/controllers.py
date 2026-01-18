@@ -216,6 +216,9 @@ def handle_savings_dbrequest(req: func.HttpRequest) -> func.HttpResponse:
         if req.method == "GET":
             month = req.params.get("month", current_month)
             data = db.get_savings(month)
+            if data is None:
+                return func.HttpResponse("Not Found", status_code=404)
+
             return func.HttpResponse(
                 json.dumps(data), mimetype="application/json", status_code=200
             )

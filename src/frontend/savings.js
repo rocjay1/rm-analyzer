@@ -40,10 +40,27 @@ async function loadData() {
             state.items = Array.isArray(data.items) ? data.items : [];
             updateStatus('');
         } else if (response.status === 404) {
-            // Reset for new month
-            state.startingBalance = 0;
-            state.items = [];
-            updateStatus('');
+            // Try fetching previous month
+            const prevMonth = getPreviousMonth(state.month);
+            try {
+                const prevResponse = await fetch(`/api/savings?month=${prevMonth}`);
+                if (prevResponse.ok) {
+                    const prevData = await prevResponse.json();
+                    state.startingBalance = prevData.startingBalance !== undefined ? prevData.startingBalance : 0;
+                    state.items = Array.isArray(prevData.items) ? prevData.items : [];
+                    updateStatus('Data copied from previous month.');
+                } else {
+                    // No previous data either, reset
+                    state.startingBalance = 0;
+                    state.items = [];
+                    updateStatus('');
+                }
+            } catch (e) {
+                // If fetch fails, just reset
+                state.startingBalance = 0;
+                state.items = [];
+                updateStatus('');
+            }
         } else {
             console.error('Failed to load data', response.statusText);
             updateStatus('Error loading data.');
@@ -296,6 +313,21 @@ function syncPickerToState() {
     const [year, month] = state.month.split('-');
     document.getElementById('monthSelect').value = month;
     document.getElementById('yearSelect').value = year;
+}
+
+function getPreviousMonth(currentMonth) {
+    if (!currentMonth) return '';
+    const [yearStr, monthStr] = currentMonth.split('-');
+    let year = parseInt(yearStr, 10);
+    let month = parseInt(monthStr, 10);
+
+    month -= 1;
+    if (month === 0) {
+        month = 12;
+        year -= 1;
+    }
+
+    return `${year}-${String(month).padStart(2, '0')}`;
 }
 
 // Start

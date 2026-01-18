@@ -26,19 +26,19 @@ jobs:
         if [ -f src/backend/requirements.txt ]; then pip install -r src/backend/requirements.txt; fi
         pip install pytest pylint black isort
 
-    - name: Format Check (Black)
+    - name: Format Check with Black
       run: black --check src/backend
 
-    - name: Import Sort Check (isort)
+    - name: Import Sort Check with isort
       run: isort --check src/backend
 
-    - name: Lint (pylint)
+    - name: Lint with pylint
       run: |
         # Run pylint on the backend source code
         # Using the configuration from .pylintrc if it exists in src/backend
         pylint --rcfile=src/backend/.pylintrc src/backend
 
-    - name: Test (pytest)
+    - name: Test with pytest
       run: |
         # Add src/backend to PYTHONPATH so tests can import modules
         export PYTHONPATH=$PYTHONPATH:$(pwd)/src/backend

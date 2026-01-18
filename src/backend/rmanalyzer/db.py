@@ -153,7 +153,7 @@ def save_transactions(transactions: list[Transaction]) -> None:
                 # For now, we log and continue to attempt other batches.
 
 
-def get_savings(month: str) -> dict[str, object]:
+def get_savings(month: str) -> dict[str, object] | None:
     """
     Retrieves savings data (Summary and Items) for a specific month.
     """
@@ -164,13 +164,18 @@ def get_savings(month: str) -> dict[str, object]:
     items: list[dict[str, object]] = []
     result: dict[str, object] = {"startingBalance": 0.0, "items": items}
 
+    found_any = False
     for entity in entities:
+        found_any = True
         if entity["RowKey"] == "SUMMARY":
             result["startingBalance"] = entity.get("StartingBalance", 0.0)
         elif entity["RowKey"].startswith("ITEM_"):
             items.append(
                 {"name": entity.get("Name", ""), "cost": entity.get("Cost", 0.0)}
             )
+
+    if not found_any:
+        return None
 
     return result
 
@@ -186,7 +191,7 @@ def save_savings(month: str, data: dict[str, object]) -> None:
     # 1. Fetch existing entities to delete
     existing_entities = list(
         client.query_entities(
-            query_filter=f"PartitionKey eq '{month}'", select=["RowKey"]
+            query_filter=f"PartitionKey eq '{month}'", select=["PartitionKey", "RowKey"]
         )
     )
 
@@ -194,18 +199,20 @@ def save_savings(month: str, data: dict[str, object]) -> None:
 
     # 2. Add delete operations
     for entity in existing_entities:
-        operations.append(("delete", entity))
+        if entity["RowKey"] != "SUMMARY":
+            operations.append(("delete", entity))
 
     # 3. Add create operations
     # Summary
     operations.append(
         (
-            "create",
+            "upsert",
             {
                 "PartitionKey": month,
                 "RowKey": "SUMMARY",
                 "StartingBalance": float(data.get("startingBalance", 0)),  # type: ignore
             },
+            {"mode": UpdateMode.REPLACE},
         )
     )
 
