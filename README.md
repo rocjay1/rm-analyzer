@@ -1,7 +1,7 @@
-Daily Tech Brief
+RM Analyzer
 ================
 
-A serverless transaction analysis and reporting tool designed to automate monthly financial tracking and shared expense reporting.
+Serverless financial tracking and shared expense reporting tool built on Azure.
 
 Features
 --------
