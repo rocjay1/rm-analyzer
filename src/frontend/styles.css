@@ -366,8 +366,12 @@ td {
         font-size: 1.1em;
     }
 
-    /* Text Alignment Adjustments */
     .text-right {
-        text-align: center;
+        text-align: start;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+        width: 100%;
     }
 }
