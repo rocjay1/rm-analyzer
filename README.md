@@ -1,19 +1,30 @@
-# rm-analyzer
+Daily Tech Brief
+================
 
-<!-- Add a brief one-line description of your project here -->
-Transaction analysis and reporting tool designed to [specific goal, e.g., automate monthly expense reporting].
+A serverless transaction analysis and reporting tool designed to automate monthly financial tracking and shared expense reporting.
 
-## 🚀 Features
+Features
+--------
 
-- [Feature 1: e.g., CSV Transaction Parsing]
-- [Feature 2: e.g., Automated Email Reports]
-- [Feature 3: e.g., Azure AD Integration]
+- **CSV Transaction Parsing**: Automatically parses bank transaction exports (CSV) and categorizes spending.
+- **Smart Categorization**: Categorizes transactions into Dining, Groceries, Pets, Bills, Travel, etc.
+- **Expense Splitting**: Calculates shared expenses and determines debts between group members.
+- **Savings Tracking**: tracks monthly savings data for visualization.
+- **Automated Reports**: Generates and sends summarized expense reports via email.
+- **Serverless Architecture**: Built on Azure Functions (Flex Consumption) and Azure Static Web Apps for cost-effective scalability.
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for system design details.
+Documentation
+-------------
 
-## 💻 Local Development
+- [System Architecture](docs/ARCHITECTURE.md)
+- [Deployment Guide](docs/DEPLOYMENT.md)
 
-1. **Setup**: Run `./setup_local.sh` to install dependencies (Azure Functions Core Tools, Azurite, SWA CLI, Python packages).
-2. **Run**: Execute `./run_local.sh` to start the backend, frontend, and local storage emulation.
-    - Frontend: <http://localhost:4280>
-    - Backend API: <http://localhost:7071>
+Local Development
+-----------------
+
+1. **Prerequisites**: Ensure you have Python 3.11+, Node.js, Azure Functions Core Tools, and Azurite installed.
+2. **Setup**: Run `./setup_local.sh` to install python dependencies and setup the environment.
+3. **Run**: Execute `./run_local.sh` to start the local development environment:
+    - **Frontend**: <http://localhost:4280>
+    - **Backend API**: <http://localhost:7071>
+    - **Blob Storage Emulator**: <http://127.0.0.1:10000>
