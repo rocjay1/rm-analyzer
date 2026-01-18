@@ -124,9 +124,58 @@ input[type="file"] {
     font-size: 14px;
 }
 
-input:focus {
+input:focus,
+select:focus {
     border-color: #0078d4;
     outline: 1px solid #0078d4;
+}
+
+/* Month Picker Premium Styling */
+.month-picker-container {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+}
+
+.picker-group {
+    display: inline-flex;
+    background: #fff;
+    border: 1px solid #8a8886;
+    border-radius: 4px;
+    overflow: hidden;
+    transition: all 0.2s;
+}
+
+.picker-group:hover {
+    border-color: #0078d4;
+    box-shadow: 0 2px 8px rgba(0, 120, 212, 0.1);
+}
+
+.select-premium {
+    border: none !important;
+    padding: 8px 12px;
+    font-size: 14px;
+    background-color: transparent;
+    cursor: pointer;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    outline: none !important;
+    color: #323130;
+    font-weight: 500;
+}
+
+#monthSelect {
+    border-right: 1px solid #edebe9 !important;
+}
+
+.picker-group:after {
+    content: '▼';
+    font-size: 10px;
+    padding: 12px;
+    color: #605e5c;
+    pointer-events: none;
 }
 
 /* Table Styles */
@@ -203,8 +252,6 @@ td {
 .actions-row {
     margin-top: 30px;
     text-align: right;
-    display: grid;
-    place-items: center;
 }
 
 .status-msg {
@@ -289,12 +336,28 @@ td {
     input[type="text"],
     input[type="number"],
     input[type="file"],
-    input[type="month"],
     select {
         width: 100%;
         margin-bottom: 10px;
         padding: 10px;
         font-size: 16px;
+    }
+
+    .month-picker-container {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: left;
+    }
+
+    .picker-group {
+        width: 100%;
+        display: flex;
+    }
+
+    .select-premium {
+        flex: 1;
+        font-size: 16px;
+        padding: 12px;
     }
 
     /* Table Adjustments (Savings Page) */
@@ -370,8 +433,10 @@ td {
         text-align: start;
     }
 
-    .form-group {
-        margin-bottom: 20px;
-        width: 100%;
+    .actions-row {
+        margin-top: 30px;
+        text-align: right;
+        display: grid;
+        place-items: center;
     }
 }

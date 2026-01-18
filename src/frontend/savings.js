@@ -12,14 +12,17 @@ async function init() {
     // Initialize state
     state.month = getCurrentMonth();
 
+    initMonthPicker();
+
     // Bind global events
-    document.getElementById('monthPicker').addEventListener('change', handleMonthChange);
+    document.getElementById('monthSelect').addEventListener('change', handlePickerChange);
+    document.getElementById('yearSelect').addEventListener('change', handlePickerChange);
     document.getElementById('startingBalance').addEventListener('input', handleBalanceChange);
     document.getElementById('addItemBtn').addEventListener('click', handleAddItem);
     document.getElementById('saveBtn').addEventListener('click', handleSave);
 
     // Initial UI sync
-    document.getElementById('monthPicker').value = state.month;
+    syncPickerToState();
 
     // Load data
     await loadData();
@@ -158,8 +161,10 @@ function createRow(index, item) {
 
 // Event Handlers
 
-function handleMonthChange(e) {
-    state.month = e.target.value;
+function handlePickerChange() {
+    const month = document.getElementById('monthSelect').value;
+    const year = document.getElementById('yearSelect').value;
+    state.month = `${year}-${month}`;
     loadData();
 }
 
@@ -249,6 +254,48 @@ function getCurrentMonth() {
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     return `${year}-${month}`;
+}
+
+function initMonthPicker() {
+    const monthSelect = document.getElementById('monthSelect');
+    const yearSelect = document.getElementById('yearSelect');
+
+    const months = [
+        { val: '01', name: 'January' },
+        { val: '02', name: 'February' },
+        { val: '03', name: 'March' },
+        { val: '04', name: 'April' },
+        { val: '05', name: 'May' },
+        { val: '06', name: 'June' },
+        { val: '07', name: 'July' },
+        { val: '08', name: 'August' },
+        { val: '09', name: 'September' },
+        { val: '10', name: 'October' },
+        { val: '11', name: 'November' },
+        { val: '12', name: 'December' }
+    ];
+
+    months.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.val;
+        opt.textContent = m.name;
+        monthSelect.appendChild(opt);
+    });
+
+    const currentYear = new Date().getFullYear();
+    for (let y = currentYear - 5; y <= currentYear + 5; y++) {
+        const opt = document.createElement('option');
+        opt.value = y.toString();
+        opt.textContent = y.toString();
+        yearSelect.appendChild(opt);
+    }
+}
+
+function syncPickerToState() {
+    if (!state.month) return;
+    const [year, month] = state.month.split('-');
+    document.getElementById('monthSelect').value = month;
+    document.getElementById('yearSelect').value = year;
 }
 
 // Start
