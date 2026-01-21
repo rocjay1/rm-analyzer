@@ -67,3 +67,18 @@ resource "cloudflare_dns_record" "azure_swa" {
   ttl        = 1
   depends_on = [azurerm_static_web_app.web]
 }
+
+resource "cloudflare_ruleset" "geoblock" {
+  zone_id     = var.zone_id
+  name        = "Geo Block"
+  description = "Block non-US traffic"
+  kind        = "zone"
+  phase       = "http_request_firewall_custom"
+
+  rules = [{
+    action      = "block"
+    expression  = "(ip.src.country ne \"US\")"
+    description = "Block non-US traffic"
+    enabled     = true
+  }]
+}
