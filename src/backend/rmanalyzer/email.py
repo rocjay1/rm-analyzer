@@ -11,9 +11,34 @@ from azure.identity import DefaultAzureCredential
 
 from .models import Category, Group, to_currency
 
-__all__ = ["SummaryEmail", "send_email"]
+__all__ = ["SummaryEmail", "send_email", "send_error_email"]
 
 logger = logging.getLogger(__name__)
+
+
+def send_error_email(sender: str, recipients: list[str], errors: list[str]) -> None:
+    """Helper to send an email with validation errors."""
+    if not sender or not recipients:
+        return
+
+    subject = "RMAnalyzer - Upload Failed"
+    error_list = "".join([f"<li>{e}</li>" for e in errors])
+    body = f"""
+    <h3>Upload Failed</h3>
+    <p>The uploaded CSV could not be processed due to the following errors:</p>
+    <ul>{error_list}</ul>
+    """
+    try:
+        # Get Endpoint
+        endpoint = os.environ.get("COMMUNICATION_SERVICES_ENDPOINT")
+        if endpoint:
+            send_email(endpoint, sender, recipients, subject, body)
+        else:
+            logger.error(
+                "COMMUNICATION_SERVICES_ENDPOINT not set, cannot send error email."
+            )
+    except Exception as email_ex:  # pylint: disable=broad-exception-caught
+        logger.error("Failed to send error email: %s", email_ex)
 
 
 def send_email(
