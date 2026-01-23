@@ -10,7 +10,14 @@ app = func.FunctionApp()
 
 @app.route(route="upload", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)
 def upload(req: func.HttpRequest) -> func.HttpResponse:
-    """Receives a CSV, uploads to Blob, enqueues message, returns 202."""
+    """
+    Receives a CSV, uploads to Blob, enqueues message, returns 202.
+
+    Security Note:
+    auth_level=ANONYMOUS is used because the function relies on Azure App Service Authentication
+    (Easy Auth) which is configured at the platform level. The application logic verifies the
+    'x-ms-client-principal' header to ensure requests are authenticated.
+    """
     return controllers.handle_upload_async(req)
 
 

@@ -78,6 +78,11 @@ class Person:
         self.account_numbers = account_numbers
         self.transactions = transactions or []
 
+    @classmethod
+    def from_config(cls, config: dict) -> "Person":
+        """Create a Person instance from a configuration dictionary."""
+        return cls(config["Name"], config["Email"], config["Accounts"], [])
+
     def add_transaction(self, transaction: Transaction) -> None:
         """Add a transaction to the person's list."""
         self.transactions.append(transaction)

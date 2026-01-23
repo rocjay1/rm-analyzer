@@ -6,17 +6,17 @@ import json
 import logging
 import os
 from datetime import datetime
+from http import HTTPStatus
 
 import azure.functions as func
 from rmanalyzer import db, storage
-from rmanalyzer.email import SummaryEmail, send_email
+from rmanalyzer.email import SummaryEmail, send_error_email
 from rmanalyzer.models import Group, Person, get_transactions
 
 __all__ = [
     "handle_upload_async",
     "handle_savings_dbrequest",
     "process_queue_item",
-    "get_members",
 ]
 
 logger = logging.getLogger(__name__)
@@ -24,11 +24,6 @@ logger = logging.getLogger(__name__)
 
 # Limit file size to 10MB to prevent DoS
 MAX_FILE_SIZE = 10 * 1024 * 1024
-
-
-def get_members(people_config: list[dict]) -> list[Person]:
-    """Convert config dicts to Person objects."""
-    return [Person(p["Name"], p["Email"], p["Accounts"], []) for p in people_config]
 
 
 def _get_uploaded_file_content(
@@ -39,7 +34,13 @@ def _get_uploaded_file_content(
     Returns (filename, content_bytes, error_response).
     """
     if not req.files:
-        return "", b"", func.HttpResponse("No file found in request.", status_code=400)
+        return (
+            "",
+            b"",
+            func.HttpResponse(
+                "No file found in request.", status_code=HTTPStatus.BAD_REQUEST
+            ),
+        )
 
     file_key = list(req.files.keys())[0]
     uploaded_file = req.files[file_key]
@@ -52,36 +53,11 @@ def _get_uploaded_file_content(
             b"",
             func.HttpResponse(
                 f"File too large. Maximum size is {MAX_FILE_SIZE/1024/1024}MB.",
-                status_code=413,
+                status_code=HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
             ),
         )
 
     return filename, file_content, None
-
-
-def _send_error_email(sender: str, recipients: list[str], errors: list[str]) -> None:
-    """Helper to send an email with validation errors."""
-    if not sender or not recipients:
-        return
-
-    subject = "RMAnalyzer - Upload Failed"
-    error_list = "".join([f"<li>{e}</li>" for e in errors])
-    body = f"""
-    <h3>Upload Failed</h3>
-    <p>The uploaded CSV could not be processed due to the following errors:</p>
-    <ul>{error_list}</ul>
-    """
-    try:
-        # Get Endpoint
-        endpoint = os.environ.get("COMMUNICATION_SERVICES_ENDPOINT")
-        if endpoint:
-            send_email(endpoint, sender, recipients, subject, body)
-        else:
-            logging.error(
-                "COMMUNICATION_SERVICES_ENDPOINT not set, cannot send error email."
-            )
-    except Exception as email_ex:  # pylint: disable=broad-exception-caught
-        logging.error("Failed to send error email: %s", email_ex)
 
 
 def handle_upload_async(req: func.HttpRequest) -> func.HttpResponse:
@@ -92,7 +68,7 @@ def handle_upload_async(req: func.HttpRequest) -> func.HttpResponse:
     logging.info("Processing async upload request.")
 
     if "x-ms-client-principal" not in req.headers:
-        return func.HttpResponse("Unauthorized", status_code=401)
+        return func.HttpResponse("Unauthorized", status_code=HTTPStatus.UNAUTHORIZED)
 
     try:
         # 1. Extract File
@@ -114,12 +90,14 @@ def handle_upload_async(req: func.HttpRequest) -> func.HttpResponse:
 
         return func.HttpResponse(
             "Upload accepted for processing.",
-            status_code=202,
+            status_code=HTTPStatus.ACCEPTED,
         )
 
     except Exception as e:  # pylint: disable=broad-exception-caught
         logging.error("Error during async upload: %s", e)
-        return func.HttpResponse(f"Upload Error: {str(e)}", status_code=500)
+        return func.HttpResponse(
+            f"Upload Error: {str(e)}", status_code=HTTPStatus.INTERNAL_SERVER_ERROR
+        )
 
 
 def process_queue_item(msg: func.QueueMessage) -> None:
@@ -148,7 +126,7 @@ def process_queue_item(msg: func.QueueMessage) -> None:
 
         # Retrieve People from DB
         people_data = db.get_all_people()
-        members = get_members(people_data)
+        members = [Person.from_config(p) for p in people_data]
 
         # If critical errors (e.g. empty file), we might stop.
         # But for row errors, we might still proceed with valid ones?
@@ -165,7 +143,7 @@ def process_queue_item(msg: func.QueueMessage) -> None:
             recipients = [p.email for p in members]
 
             if sender:
-                _send_error_email(sender, recipients, errors)
+                send_error_email(sender, recipients, errors)
             else:
                 logging.error("Sender email not configured, cannot send error email.")
 
@@ -217,29 +195,39 @@ def handle_savings_dbrequest(req: func.HttpRequest) -> func.HttpResponse:
             month = req.params.get("month", current_month)
             data = db.get_savings(month)
             if data is None:
-                return func.HttpResponse("Not Found", status_code=404)
+                return func.HttpResponse("Not Found", status_code=HTTPStatus.NOT_FOUND)
 
             return func.HttpResponse(
-                json.dumps(data), mimetype="application/json", status_code=200
+                json.dumps(data),
+                mimetype="application/json",
+                status_code=HTTPStatus.OK,
             )
 
         if req.method == "POST":
             try:
                 req_body = req.get_json()
             except ValueError:
-                return func.HttpResponse("Invalid JSON", status_code=400)
+                return func.HttpResponse(
+                    "Invalid JSON", status_code=HTTPStatus.BAD_REQUEST
+                )
 
             month = req_body.get("month", current_month)
 
             # Basic validation (allow empty items, but check structure)
             if "startingBalance" not in req_body:
-                return func.HttpResponse("Missing required fields", status_code=400)
+                return func.HttpResponse(
+                    "Missing required fields", status_code=HTTPStatus.BAD_REQUEST
+                )
 
             db.save_savings(month, req_body)
-            return func.HttpResponse("Saved successfully", status_code=200)
+            return func.HttpResponse("Saved successfully", status_code=HTTPStatus.OK)
 
     except Exception as e:  # pylint: disable=broad-exception-caught
         logging.error("Error in savings handler: %s", e)
-        return func.HttpResponse(f"Internal Error: {str(e)}", status_code=500)
+        return func.HttpResponse(
+            f"Internal Error: {str(e)}", status_code=HTTPStatus.INTERNAL_SERVER_ERROR
+        )
 
-    return func.HttpResponse("Method not supported", status_code=405)
+    return func.HttpResponse(
+        "Method not supported", status_code=HTTPStatus.METHOD_NOT_ALLOWED
+    )
