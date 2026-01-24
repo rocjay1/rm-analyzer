@@ -13,12 +13,14 @@ class TestSavingsDB(unittest.TestCase):
         self.mock_client.query_entities.return_value = []
 
         month = "2023-11"
+        user = "test@example.com"
+        pk = f"{user}_{month}"
         data = {
             "startingBalance": 1000.50,
             "items": [{"name": "Rent", "cost": 1500}, {"name": "Food", "cost": 500}],
         }
 
-        db.save_savings(month, data)
+        db.save_savings(month, data, user)
 
         # Verify submit_transaction called
         self.mock_client.submit_transaction.assert_called_once()
@@ -33,7 +35,7 @@ class TestSavingsDB(unittest.TestCase):
 
         # Check Summary
         summary = next(op[1] for op in batch_args if op[1]["RowKey"] == "SUMMARY")
-        self.assertEqual(summary["PartitionKey"], month)
+        self.assertEqual(summary["PartitionKey"], pk)
         self.assertEqual(summary["StartingBalance"], 1000.50)
 
         # Check Items
@@ -44,17 +46,19 @@ class TestSavingsDB(unittest.TestCase):
 
     def test_get_savings_reassembles_json(self):
         month = "2023-11"
+        user = "test@example.com"
+        pk = f"{user}_{month}"
 
         mock_entities = [
-            {"PartitionKey": month, "RowKey": "SUMMARY", "StartingBalance": 2000.0},
+            {"PartitionKey": pk, "RowKey": "SUMMARY", "StartingBalance": 2000.0},
             {
-                "PartitionKey": month,
+                "PartitionKey": pk,
                 "RowKey": "ITEM_1",
                 "Name": "Utilities",
                 "Cost": 150.0,
             },
             {
-                "PartitionKey": month,
+                "PartitionKey": pk,
                 "RowKey": "ITEM_2",
                 "Name": "Internet",
                 "Cost": 80.0,
@@ -63,7 +67,7 @@ class TestSavingsDB(unittest.TestCase):
 
         self.mock_client.query_entities.return_value = mock_entities
 
-        result = db.get_savings(month)
+        result = db.get_savings(month, user)
 
         self.assertEqual(result["startingBalance"], 2000.0)
         self.assertEqual(len(result["items"]), 2)
@@ -74,17 +78,21 @@ class TestSavingsDB(unittest.TestCase):
         # Mock empty query result
         self.mock_client.query_entities.return_value = []
 
-        result = db.get_savings("2026-02")
+        result = db.get_savings("2026-02", "user")
         self.assertIsNone(result)
 
     def test_save_savings_deletes_existing(self):
+        month = "2023-11"
+        user = "test@example.com"
+        pk = f"{user}_{month}"
+
         # Mock existing items
         self.mock_client.query_entities.return_value = [
-            {"PartitionKey": "2023-11", "RowKey": "SUMMARY"},
-            {"PartitionKey": "2023-11", "RowKey": "ITEM_OLD"},
+            {"PartitionKey": pk, "RowKey": "SUMMARY"},
+            {"PartitionKey": pk, "RowKey": "ITEM_OLD"},
         ]
 
-        db.save_savings("2023-11", {})
+        db.save_savings(month, {}, user)
 
         batch_args = self.mock_client.submit_transaction.call_args[0][0]
 

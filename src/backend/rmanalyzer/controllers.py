@@ -2,6 +2,7 @@
 Controllers for handling application logic.
 """
 
+import base64
 import json
 import logging
 import os
@@ -24,6 +25,24 @@ logger = logging.getLogger(__name__)
 
 # Limit file size to 10MB to prevent DoS
 MAX_FILE_SIZE = 10 * 1024 * 1024
+
+
+def _get_user_email(req: func.HttpRequest) -> str | None:
+    """
+    Parses the 'x-ms-client-principal' header to get the user's email (userDetails).
+    Returns None if header is missing or invalid.
+    """
+    header = req.headers.get("x-ms-client-principal")
+    if not header:
+        return None
+
+    try:
+        decoded = base64.b64decode(header).decode("utf-8")
+        principal = json.loads(decoded)
+        return principal.get("userDetails")
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        logging.error("Failed to parse x-ms-client-principal: %s", e)
+        return None
 
 
 def _get_uploaded_file_content(
@@ -187,13 +206,17 @@ def handle_savings_dbrequest(req: func.HttpRequest) -> func.HttpResponse:
     """Handles getting and updating savings calculation data."""
     logging.info("Processing savings request.")
 
+    user_email = _get_user_email(req)
+    if not user_email:
+        return func.HttpResponse("Unauthorized", status_code=HTTPStatus.UNAUTHORIZED)
+
     try:
         # Default month to current month if not provided
         current_month = datetime.now().strftime("%Y-%m")
 
         if req.method == "GET":
             month = req.params.get("month", current_month)
-            data = db.get_savings(month)
+            data = db.get_savings(month, user_email)
             if data is None:
                 return func.HttpResponse("Not Found", status_code=HTTPStatus.NOT_FOUND)
 
@@ -219,7 +242,7 @@ def handle_savings_dbrequest(req: func.HttpRequest) -> func.HttpResponse:
                     "Missing required fields", status_code=HTTPStatus.BAD_REQUEST
                 )
 
-            db.save_savings(month, req_body)
+            db.save_savings(month, req_body, user_email)
             return func.HttpResponse("Saved successfully", status_code=HTTPStatus.OK)
 
     except Exception as e:  # pylint: disable=broad-exception-caught
