@@ -153,13 +153,14 @@ def save_transactions(transactions: list[Transaction]) -> None:
                 # For now, we log and continue to attempt other batches.
 
 
-def get_savings(month: str) -> dict[str, object] | None:
+def get_savings(month: str, user_id: str) -> dict[str, object] | None:
     """
-    Retrieves savings data (Summary and Items) for a specific month.
+    Retrieves savings data (Summary and Items) for a specific month and user.
     """
     client = _get_table_client(SAVINGS_TABLE)
+    partition_key = f"{user_id}_{month}"
 
-    entities = client.query_entities(query_filter=f"PartitionKey eq '{month}'")
+    entities = client.query_entities(query_filter=f"PartitionKey eq '{partition_key}'")
 
     items: list[dict[str, object]] = []
     result: dict[str, object] = {"startingBalance": 0.0, "items": items}
@@ -180,18 +181,20 @@ def get_savings(month: str) -> dict[str, object] | None:
     return result
 
 
-def save_savings(month: str, data: dict[str, object]) -> None:
+def save_savings(month: str, data: dict[str, object], user_id: str) -> None:
     """
-    Saves savings data for a month using a batch transaction (Delete All + Insert All).
+    Saves savings data for a month and user using a batch transaction (Delete All + Insert All).
     Attempts to use a single atomic transaction if operations <= 100.
     Otherwise, splits into multiple batches (atomicity not guaranteed across batches).
     """
     client = _get_table_client(SAVINGS_TABLE)
+    partition_key = f"{user_id}_{month}"
 
     # 1. Fetch existing entities to delete
     existing_entities = list(
         client.query_entities(
-            query_filter=f"PartitionKey eq '{month}'", select=["PartitionKey", "RowKey"]
+            query_filter=f"PartitionKey eq '{partition_key}'",
+            select=["PartitionKey", "RowKey"],
         )
     )
 
@@ -208,7 +211,7 @@ def save_savings(month: str, data: dict[str, object]) -> None:
         (
             "upsert",
             {
-                "PartitionKey": month,
+                "PartitionKey": partition_key,
                 "RowKey": "SUMMARY",
                 "StartingBalance": float(data.get("startingBalance", 0)),  # type: ignore
             },
@@ -226,7 +229,7 @@ def save_savings(month: str, data: dict[str, object]) -> None:
                     (
                         "create",
                         {
-                            "PartitionKey": month,
+                            "PartitionKey": partition_key,
                             "RowKey": row_key,
                             "Name": item.get("name", ""),
                             "Cost": float(item.get("cost", 0)),  # type: ignore
