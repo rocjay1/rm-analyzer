@@ -46,6 +46,7 @@ resource "azurerm_function_app_flex_consumption" "app" {
     "DEPLOYMENT_STORAGE_AUTHENTICATION_TYPE" = "SystemAssignedIdentity"
     "DEPLOYMENT_STORAGE_ACCOUNT_NAME"        = azurerm_storage_account.sa.name
     "STORAGE_ACCOUNT_URL"                    = azurerm_storage_account.sa.primary_blob_endpoint
+    "TABLE_SERVICE_URL"                      = azurerm_storage_account.sa.primary_table_endpoint
     "StorageConnection__blobServiceUri"      = azurerm_storage_account.sa.primary_blob_endpoint
     "StorageConnection__queueServiceUri"     = azurerm_storage_account.sa.primary_queue_endpoint
     # Robustly extract endpoint from connection string to avoid region hardcoding

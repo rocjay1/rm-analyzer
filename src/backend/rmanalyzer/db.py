@@ -28,7 +28,6 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 # Environment variable set by our infrastructure
-STORAGE_ACCOUNT_URL = os.environ.get("STORAGE_ACCOUNT_URL")
 TRANSACTIONS_TABLE = "transactions"
 SAVINGS_TABLE = "savings"
 PEOPLE_TABLE = "people"
@@ -36,38 +35,28 @@ PEOPLE_TABLE = "people"
 
 def _get_table_client(table_name: str) -> TableClient:
     """Returns a TableClient, ensuring the table exists."""
-    credential = DefaultAzureCredential()
-
     # 1. Prefer explicit Table Service URL (Local Dev / Azurite)
     table_service_url = os.environ.get("TABLE_SERVICE_URL")
 
-    if table_service_url:
-        # For local HTTP (Azurite), use the well-known account name/key
-        if table_service_url.startswith("http://"):
-            # Azurite well-known credentials
-            client = TableClient(
-                endpoint=table_service_url,
-                table_name=table_name,
-                credential=AzureNamedKeyCredential(
-                    "devstoreaccount1",
-                    "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
-                ),
-            )
-        else:
-            client = TableClient(
-                endpoint=table_service_url, table_name=table_name, credential=credential
-            )
-    elif STORAGE_ACCOUNT_URL:
-        # 2. Fallback to constructing from Blob URL (Production)
-        # STORAGE_ACCOUNT_URL is like "https://<account>.blob.core.windows.net/"
-        # We need "https://<account>.table.core.windows.net/"
-        table_endpoint = STORAGE_ACCOUNT_URL.replace(".blob.", ".table.")
+    if not table_service_url:
+        raise ValueError("TABLE_SERVICE_URL environment variable is not set.")
+
+    # For local HTTP (Azurite), use the well-known account name/key
+    if table_service_url.startswith("http://"):
+        # Azurite well-known credentials
         client = TableClient(
-            endpoint=table_endpoint, table_name=table_name, credential=credential
+            endpoint=table_service_url,
+            table_name=table_name,
+            credential=AzureNamedKeyCredential(
+                "devstoreaccount1",
+                "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
+            ),
         )
     else:
-        raise ValueError(
-            "Neither TABLE_SERVICE_URL nor RM_ANALYZER_STORAGE_ACCOUNT_URL environment variable is set."
+        client = TableClient(
+            endpoint=table_service_url,
+            table_name=table_name,
+            credential=DefaultAzureCredential(),
         )
 
     try:
