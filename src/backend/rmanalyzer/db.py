@@ -35,7 +35,7 @@ PEOPLE_TABLE = "people"
 
 def _get_table_client(table_name: str) -> TableClient:
     """Returns a TableClient, ensuring the table exists."""
-    # 1. Prefer explicit Table Service URL (Local Dev / Azurite)
+    # 1. Get Table Service URL
     table_service_url = os.environ.get("TABLE_SERVICE_URL")
 
     if not table_service_url:
