@@ -16,7 +16,10 @@ class TestFunctionApp(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.req = MagicMock(spec=func.HttpRequest)
-        self.req.headers = {"x-ms-client-principal": "test-user"}
+        # Base64 encoded: {"userDetails": "user@example.com"}
+        self.req.headers = {
+            "x-ms-client-principal": "eyJ1c2VyRGV0YWlscyI6ICJ1c2VyQGV4YW1wbGUuY29tIn0="
+        }
         self.req.files = {"file": MagicMock()}
         self.req.files["file"].filename = "test.csv"
         # csv content

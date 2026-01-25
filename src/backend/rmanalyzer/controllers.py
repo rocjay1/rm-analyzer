@@ -86,7 +86,7 @@ def handle_upload_async(req: func.HttpRequest) -> func.HttpResponse:
     """
     logging.info("Processing async upload request.")
 
-    if "x-ms-client-principal" not in req.headers:
+    if not _get_user_email(req):
         return func.HttpResponse("Unauthorized", status_code=HTTPStatus.UNAUTHORIZED)
 
     try:
