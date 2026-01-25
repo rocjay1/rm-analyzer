@@ -8,7 +8,7 @@ from datetime import date
 from decimal import Decimal
 from unittest.mock import patch
 
-from rmanalyzer.email import render_body, get_subject, send_email
+from rmanalyzer.email import render_body, render_subject, send_email
 from rmanalyzer.models import Category, Group, IgnoredFrom, Person, Transaction
 
 
@@ -45,9 +45,9 @@ class TestEmailer(unittest.TestCase):
         self.assertIn("Error 2", body)
         self.assertIn("Alice", body)
 
-    def test_get_subject(self):
+    def test_render_subject(self):
         """Test generating the email subject."""
-        subject = get_subject(self.group)
+        subject = render_subject(self.group)
         self.assertIn("Transactions Summary", subject)
         self.assertIn("08/01/25", subject)
 

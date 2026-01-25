@@ -11,7 +11,7 @@ from azure.identity import DefaultAzureCredential
 
 from .models import Category, Group, to_currency
 
-__all__ = ["send_email", "send_error_email", "render_body", "get_subject"]
+__all__ = ["send_email", "send_error_email", "render_body", "render_subject"]
 
 logger = logging.getLogger(__name__)
 
@@ -207,7 +207,7 @@ def render_body(group: Group, errors: List[str] = None) -> str:
     </html>
     """
 
-def get_subject(group: Group) -> str:
+def render_subject(group: Group) -> str:
     """Generate the email subject based on the transaction date range."""
     min_date = group.get_oldest_transaction()
     max_date = group.get_newest_transaction()
