@@ -129,7 +129,9 @@ def render_body(group: Group, errors: List[str] = None) -> str:
         row_cells = f"<td>{p.name}</td>"
         for c in tracked_categories:
             row_cells += f"<td>{to_currency(p.get_expenses(c))}</td>"
-        row_cells += f"<td style='font-weight: bold;'>{to_currency(p.get_expenses())}</td>"
+        row_cells += (
+            f"<td style='font-weight: bold;'>{to_currency(p.get_expenses())}</td>"
+        )
         rows_html += f"<tr>{row_cells}</tr>"
 
     # Difference Row (if 2 members)
@@ -137,7 +139,9 @@ def render_body(group: Group, errors: List[str] = None) -> str:
         p1, p2 = group.members
         diff_cells = "<td>Difference</td>"
         for c in tracked_categories:
-            diff_cells += f"<td>{to_currency(group.get_expenses_difference(p1, p2, c))}</td>"
+            diff_cells += (
+                f"<td>{to_currency(group.get_expenses_difference(p1, p2, c))}</td>"
+            )
         diff_cells += f"<td style='font-weight: bold;'>{to_currency(group.get_expenses_difference(p1, p2))}</td>"
         rows_html += f"<tr style='background-color: #f8f9fa;'>{diff_cells}</tr>"
 
@@ -206,6 +210,7 @@ def render_body(group: Group, errors: List[str] = None) -> str:
     </body>
     </html>
     """
+
 
 def render_subject(group: Group) -> str:
     """Generate the email subject based on the transaction date range."""
