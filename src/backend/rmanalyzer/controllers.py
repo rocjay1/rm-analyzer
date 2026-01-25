@@ -11,7 +11,8 @@ from http import HTTPStatus
 
 import azure.functions as func
 from rmanalyzer import db, storage
-from rmanalyzer.email import send_email, send_error_email, render_body, render_subject
+from rmanalyzer.email import (render_body, render_subject, send_email,
+                              send_error_email)
 from rmanalyzer.models import Group, Person, get_transactions
 
 __all__ = [
