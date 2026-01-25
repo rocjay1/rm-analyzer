@@ -33,6 +33,16 @@ SAVINGS_TABLE = "savings"
 PEOPLE_TABLE = "people"
 
 
+def _ensure_table_exists(client: TableClient) -> None:
+    """Creates the table if it does not exist."""
+    try:
+        client.create_table()
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        # Ignore if table already exists
+        if "TableAlreadyExists" not in str(e):
+            logger.warning("Could not create table (might already exist): %s", e)
+
+
 def _get_table_client(table_name: str) -> TableClient:
     """Returns a TableClient, ensuring the table exists."""
     # 1. Get Table Service URL
@@ -41,7 +51,7 @@ def _get_table_client(table_name: str) -> TableClient:
     if not table_service_url:
         raise ValueError("TABLE_SERVICE_URL environment variable is not set.")
 
-    # For local HTTP (Azurite), use the well-known account name/key
+    # 2. Check for Local Dev / Azurite
     if table_service_url.startswith("http://"):
         # Azurite well-known credentials
         client = TableClient(
@@ -52,20 +62,16 @@ def _get_table_client(table_name: str) -> TableClient:
                 "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
             ),
         )
-    else:
-        client = TableClient(
-            endpoint=table_service_url,
-            table_name=table_name,
-            credential=DefaultAzureCredential(),
-        )
+        _ensure_table_exists(client)
+        return client
 
-    try:
-        client.create_table()
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        # Ignore if table already exists
-        if "TableAlreadyExists" not in str(e):
-            logger.warning("Could not create table (might already exist): %s", e)
-
+    # 3. Production
+    client = TableClient(
+        endpoint=table_service_url,
+        table_name=table_name,
+        credential=DefaultAzureCredential(),
+    )
+    _ensure_table_exists(client)
     return client
 
 

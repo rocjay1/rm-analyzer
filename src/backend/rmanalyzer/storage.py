@@ -23,67 +23,54 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-STORAGE_ACCOUNT_URL = os.environ.get("STORAGE_ACCOUNT_URL")
 BLOB_CONTAINER_NAME = "csv-uploads"
 QUEUE_NAME = "csv-processing"
 
 
-def _get_credential() -> DefaultAzureCredential:
-    """Returns the default azure credential."""
-    return DefaultAzureCredential()
-
-
 def _get_blob_service_client() -> BlobServiceClient:
     """Returns a BlobServiceClient."""
-    credential = _get_credential()
-
-    # 1. Prefer explicit Blob Service URL (Local Dev / Azurite)
+    # 1. Get Blob Service URL
     blob_service_url = os.environ.get("BLOB_SERVICE_URL")
 
-    if blob_service_url:
-        if blob_service_url.startswith("http://"):
-            # Azurite well-known credentials
-            return BlobServiceClient(
-                account_url=blob_service_url,
-                credential="Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
-            )
-        return BlobServiceClient(account_url=blob_service_url, credential=credential)
+    if not blob_service_url:
+        raise ValueError("BLOB_SERVICE_URL environment variable is not set.")
 
-    # 2. Fallback to STORAGE_ACCOUNT_URL (Production)
-    if not STORAGE_ACCOUNT_URL:
-        raise ValueError("STORAGE_ACCOUNT_URL environment variable is not set.")
+    # 2. Check for Local Dev / Azurite
+    if blob_service_url.startswith("http://"):
+        # Azurite well-known credentials
+        return BlobServiceClient(
+            account_url=blob_service_url,
+            credential="Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
+        )
 
-    return BlobServiceClient(account_url=STORAGE_ACCOUNT_URL, credential=credential)
+    # 3. Production
+    return BlobServiceClient(
+        account_url=blob_service_url, credential=DefaultAzureCredential()
+    )
 
 
 def _get_queue_client() -> QueueClient:
     """Returns a QueueClient."""
-    credential = _get_credential()
-
-    # 1. Prefer explicit Queue Service URL (Local Dev / Azurite)
+    # 1. Get Queue Service URL
     queue_service_url = os.environ.get("QUEUE_SERVICE_URL")
 
-    if queue_service_url:
-        if queue_service_url.startswith("http://"):
-            # Azurite well-known credentials
-            return QueueClient(
-                account_url=queue_service_url,
-                queue_name=QUEUE_NAME,
-                credential="Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
-            )
+    if not queue_service_url:
+        raise ValueError("QUEUE_SERVICE_URL environment variable is not set.")
+
+    # 2. Check for Local Dev / Azurite
+    if queue_service_url.startswith("http://"):
+        # Azurite well-known credentials
         return QueueClient(
-            account_url=queue_service_url, queue_name=QUEUE_NAME, credential=credential
+            account_url=queue_service_url,
+            queue_name=QUEUE_NAME,
+            credential="Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
         )
 
-    # 2. Fallback to constructing from Blob URL (Production)
-    if not STORAGE_ACCOUNT_URL:
-        raise ValueError("STORAGE_ACCOUNT_URL environment variable is not set.")
-
-    # Construct the queue endpoint URL safely
-    queue_endpoint = STORAGE_ACCOUNT_URL.replace(".blob.", ".queue.")
-
+    # 3. Production
     return QueueClient(
-        account_url=queue_endpoint, queue_name=QUEUE_NAME, credential=credential
+        account_url=queue_service_url,
+        queue_name=QUEUE_NAME,
+        credential=DefaultAzureCredential(),
     )
 
 
