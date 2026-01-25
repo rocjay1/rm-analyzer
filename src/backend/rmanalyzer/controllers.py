@@ -137,9 +137,6 @@ def process_queue_item(msg: func.QueueMessage) -> None:
         # 1. Download CSV
         csv_content = storage.download_csv(blob_name)
 
-        # 2. Config Check (removed legacy file config)
-        # We rely on DB for people and Env Vars for other settings now.
-
         # 3. Analysis
         transactions, errors = get_transactions(csv_content)
 
@@ -147,11 +144,6 @@ def process_queue_item(msg: func.QueueMessage) -> None:
         people_data = db.get_all_people()
         members = [Person.from_config(p) for p in people_data]
 
-        # If critical errors (e.g. empty file), we might stop.
-        # But for row errors, we might still proceed with valid ones?
-        # Current logic: if ANY errors, we abort email?
-        # Original logic returned 400. Here we can't return 400.
-        # We should probably log errors or email them.
         if errors and len(transactions) == 0:
             logging.error("CSV Validation Errors: %s", errors)
 
@@ -189,7 +181,7 @@ def process_queue_item(msg: func.QueueMessage) -> None:
             logging.error("Sender email not configured.")
             return
 
-        email = SummaryEmail(sender, [p.email for p in group.members])
+        email = SummaryEmail(sender, [p.email for p in group.members], errors=errors)
         email.add_body(group)
         email.add_subject(group)
         email.send()

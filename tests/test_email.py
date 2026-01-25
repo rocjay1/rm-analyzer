@@ -40,6 +40,19 @@ class TestEmailer(unittest.TestCase):
         self.assertIn("html", self.email.body)
         self.assertIn("Difference", self.email.body)
 
+    def test_add_body_with_errors(self):
+        """Test adding body content with validation errors."""
+        email = SummaryEmail(
+            "sender@example.com",
+            ["alice@example.com", "bob@example.com"],
+            errors=["Error 1", "Error 2"],
+        )
+        email.add_body(self.group)
+        self.assertIn("Warning: Some transactions were skipped", email.body)
+        self.assertIn("Error 1", email.body)
+        self.assertIn("Error 2", email.body)
+        self.assertIn("Alice", email.body)
+
     def test_add_subject(self):
         """Test generating the email subject."""
         self.email.add_subject(self.group)
