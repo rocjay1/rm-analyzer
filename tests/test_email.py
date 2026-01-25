@@ -8,12 +8,12 @@ from datetime import date
 from decimal import Decimal
 from unittest.mock import patch
 
-from rmanalyzer.email import SummaryEmail
+from rmanalyzer.email import render_body, render_subject, send_email
 from rmanalyzer.models import Category, Group, IgnoredFrom, Person, Transaction
 
 
 class TestEmailer(unittest.TestCase):
-    """Test suite for the SummaryEmail class."""
+    """Test suite for the email functions."""
 
     def setUp(self):
         """Set up test fixtures."""
@@ -28,66 +28,53 @@ class TestEmailer(unittest.TestCase):
         self.p1 = Person("Alice", "alice@example.com", [1], [self.t1])
         self.p2 = Person("Bob", "bob@example.com", [2], [])
         self.group = Group([self.p1, self.p2])
-        self.email = SummaryEmail(
-            "sender@example.com", ["alice@example.com", "bob@example.com"]
-        )
 
-    def test_add_body(self):
-        """Test adding body content to the email."""
-        self.email.add_body(self.group)
-        self.assertIn("Alice", self.email.body)
-        self.assertIn("10.00", self.email.body)
-        self.assertIn("html", self.email.body)
-        self.assertIn("Difference", self.email.body)
+    def test_render_body(self):
+        """Test rendering the email body."""
+        body = render_body(self.group)
+        self.assertIn("Alice", body)
+        self.assertIn("10.00", body)
+        self.assertIn("html", body)
+        self.assertIn("Difference", body)
 
-    def test_add_body_with_errors(self):
-        """Test adding body content with validation errors."""
-        email = SummaryEmail(
-            "sender@example.com",
-            ["alice@example.com", "bob@example.com"],
-            errors=["Error 1", "Error 2"],
-        )
-        email.add_body(self.group)
-        self.assertIn("Warning: Some transactions were skipped", email.body)
-        self.assertIn("Error 1", email.body)
-        self.assertIn("Error 2", email.body)
-        self.assertIn("Alice", email.body)
+    def test_render_body_with_errors(self):
+        """Test rendering body content with validation errors."""
+        body = render_body(self.group, errors=["Error 1", "Error 2"])
+        self.assertIn("Warning: Some transactions were skipped", body)
+        self.assertIn("Error 1", body)
+        self.assertIn("Error 2", body)
+        self.assertIn("Alice", body)
 
-    def test_add_subject(self):
+    def test_render_subject(self):
         """Test generating the email subject."""
-        self.email.add_subject(self.group)
-        self.assertIn("Transactions Summary", self.email.subject)
-        self.assertIn("08/01/25", self.email.subject)
+        subject = render_subject(self.group)
+        self.assertIn("Transactions Summary", subject)
+        self.assertIn("08/01/25", subject)
 
-    @patch("rmanalyzer.email.send_email")
-    @patch.dict(
-        os.environ,
-        {"COMMUNICATION_SERVICES_ENDPOINT": "https://test.communication.azure.com"},
-    )
-    def test_send(self, mock_send_email):
+    @patch("rmanalyzer.email.EmailClient")
+    @patch("rmanalyzer.email.DefaultAzureCredential")
+    def test_send_email_success(self, mock_credential, mock_email_client):
         """Test sending the email with valid configuration."""
-        self.email.subject = "Test Subject"
-        self.email.body = "Test Body"
-        self.email.send()
+        mock_poller = unittest.mock.Mock()
+        mock_poller.result.return_value = {"messageId": "test_id"}
 
-        mock_send_email.assert_called_once_with(
+        mock_client_instance = mock_email_client.return_value
+        mock_client_instance.begin_send.return_value = mock_poller
+
+        send_email(
             "https://test.communication.azure.com",
             "sender@example.com",
-            ["alice@example.com", "bob@example.com"],
+            ["alice@example.com"],
             "Test Subject",
-            "Test Body",
+            "Test Body"
         )
 
-    @patch("rmanalyzer.email.send_email")
-    def test_send_missing_env_var(self, _):
-        """Test that sending fails when environment variable is missing."""
-        # Ensure env var is not set
-        if "COMMUNICATION_SERVICES_ENDPOINT" in os.environ:
-            del os.environ["COMMUNICATION_SERVICES_ENDPOINT"]
-
-        with self.assertRaises(ValueError):
-            self.email.send()
-
+        mock_client_instance.begin_send.assert_called_once()
+        args, _ = mock_client_instance.begin_send.call_args
+        message = args[0]
+        self.assertEqual(message["senderAddress"], "sender@example.com")
+        self.assertEqual(message["recipients"]["to"][0]["address"], "alice@example.com")
+        self.assertEqual(message["content"]["subject"], "Test Subject")
 
 if __name__ == "__main__":
     unittest.main()

@@ -11,7 +11,7 @@ from http import HTTPStatus
 
 import azure.functions as func
 from rmanalyzer import db, storage
-from rmanalyzer.email import SummaryEmail, send_error_email
+from rmanalyzer.email import render_body, render_subject, send_email, send_error_email
 from rmanalyzer.models import Group, Person, get_transactions
 
 __all__ = [
@@ -176,15 +176,21 @@ def process_queue_item(msg: func.QueueMessage) -> None:
             return
 
         sender = os.environ.get("SENDER_EMAIL")
+        endpoint = os.environ.get("COMMUNICATION_SERVICES_ENDPOINT")
 
         if not sender:
             logging.error("Sender email not configured.")
             return
 
-        email = SummaryEmail(sender, [p.email for p in group.members], errors=errors)
-        email.add_body(group)
-        email.add_subject(group)
-        email.send()
+        if not endpoint:
+            logging.error("Communication Services Endpoint not configured.")
+            return
+
+        body = render_body(group, errors=errors)
+        subject = render_subject(group)
+        recipients = [p.email for p in group.members]
+
+        send_email(endpoint, sender, recipients, subject, body)
 
         logging.info("Processing complete for %s", blob_name)
 
