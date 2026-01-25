@@ -33,6 +33,16 @@ SAVINGS_TABLE = "savings"
 PEOPLE_TABLE = "people"
 
 
+def _ensure_table_exists(client: TableClient) -> None:
+    """Creates the table if it does not exist."""
+    try:
+        client.create_table()
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        # Ignore if table already exists
+        if "TableAlreadyExists" not in str(e):
+            logger.warning("Could not create table (might already exist): %s", e)
+
+
 def _get_table_client(table_name: str) -> TableClient:
     """Returns a TableClient, ensuring the table exists."""
     # 1. Get Table Service URL
@@ -52,21 +62,16 @@ def _get_table_client(table_name: str) -> TableClient:
                 "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
             ),
         )
+        _ensure_table_exists(client)
+        return client
+
     # 3. Production
-    else:
-        client = TableClient(
-            endpoint=table_service_url,
-            table_name=table_name,
-            credential=DefaultAzureCredential(),
-        )
-
-    try:
-        client.create_table()
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        # Ignore if table already exists
-        if "TableAlreadyExists" not in str(e):
-            logger.warning("Could not create table (might already exist): %s", e)
-
+    client = TableClient(
+        endpoint=table_service_url,
+        table_name=table_name,
+        credential=DefaultAzureCredential(),
+    )
+    _ensure_table_exists(client)
     return client
 
 
