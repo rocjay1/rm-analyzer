@@ -4,7 +4,7 @@ Email utilities for RMAnalyzer.
 
 import logging
 import os
-from typing import List, Optional
+from typing import List
 
 from azure.communication.email import EmailClient
 from azure.identity import DefaultAzureCredential
