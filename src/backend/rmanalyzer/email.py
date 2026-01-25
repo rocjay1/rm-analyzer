@@ -88,9 +88,10 @@ def send_email(
 class SummaryEmail:
     """Formats and sends a summary email for a group of people."""
 
-    def __init__(self, sender: str, to: list[str]) -> None:
+    def __init__(self, sender: str, to: list[str], errors: list[str] = None) -> None:
         self.sender = sender
         self.to = to
+        self.errors = errors or []
         self.subject = str()
         self.body = str()
 
@@ -104,9 +105,21 @@ class SummaryEmail:
                 doc.asis(
                     "<style>table {border-collapse: collapse; width: 100%} "
                     "th, td {border: 1px solid black; padding: 8px 12px; text-align: left;} "
-                    "th {background-color: #f2f2f2;}</style>"
+                    "th {background-color: #f2f2f2;} "
+                    ".error {color: red;}</style>"
                 )
             with tag("body"):
+                if self.errors:
+                    with tag("div", klass="error"):
+                        with tag("h3"):
+                            text("⚠️ Warning: Some transactions were skipped")
+                        with tag("ul"):
+                            for error in self.errors:
+                                with tag("li"):
+                                    text(error)
+                        with tag("hr"):
+                            pass
+
                 with tag("table", border="1"):
                     with tag("thead"):
                         with tag("tr"):
