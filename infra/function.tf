@@ -45,7 +45,6 @@ resource "azurerm_function_app_flex_consumption" "app" {
     "AzureWebJobsStorage__credential"        = "managedidentity"
     "DEPLOYMENT_STORAGE_AUTHENTICATION_TYPE" = "SystemAssignedIdentity"
     "DEPLOYMENT_STORAGE_ACCOUNT_NAME"        = azurerm_storage_account.sa.name
-    "STORAGE_ACCOUNT_URL"                    = azurerm_storage_account.sa.primary_blob_endpoint
     "BLOB_SERVICE_URL"                       = azurerm_storage_account.sa.primary_blob_endpoint
     "QUEUE_SERVICE_URL"                      = azurerm_storage_account.sa.primary_queue_endpoint
     "TABLE_SERVICE_URL"                      = azurerm_storage_account.sa.primary_table_endpoint

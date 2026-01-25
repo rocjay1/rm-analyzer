@@ -41,7 +41,7 @@ def _get_table_client(table_name: str) -> TableClient:
     if not table_service_url:
         raise ValueError("TABLE_SERVICE_URL environment variable is not set.")
 
-    # For local HTTP (Azurite), use the well-known account name/key
+    # 2. Check for Local Dev / Azurite
     if table_service_url.startswith("http://"):
         # Azurite well-known credentials
         client = TableClient(
@@ -52,6 +52,7 @@ def _get_table_client(table_name: str) -> TableClient:
                 "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
             ),
         )
+    # 3. Production
     else:
         client = TableClient(
             endpoint=table_service_url,

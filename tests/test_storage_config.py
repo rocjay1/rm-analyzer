@@ -15,7 +15,7 @@ class TestStorageConfig(unittest.TestCase):
         # Save original environment to restore later
         self.original_env = dict(os.environ)
         # Clear relevant env vars to ensure clean state
-        for key in ["BLOB_SERVICE_URL", "QUEUE_SERVICE_URL", "STORAGE_ACCOUNT_URL"]:
+        for key in ["BLOB_SERVICE_URL", "QUEUE_SERVICE_URL"]:
             if key in os.environ:
                 del os.environ[key]
 
