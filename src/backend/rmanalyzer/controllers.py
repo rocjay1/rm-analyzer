@@ -10,9 +10,10 @@ from datetime import datetime
 from http import HTTPStatus
 
 import azure.functions as func
+import rmanalyzer.email
 from rmanalyzer import db, storage
-from rmanalyzer.email import render_body, render_subject, send_email, send_error_email
-from rmanalyzer.models import Group, Person, get_transactions
+from rmanalyzer.models import Group, Person
+from rmanalyzer.utils import get_transactions
 
 __all__ = [
     "handle_upload_async",
@@ -25,6 +26,14 @@ logger = logging.getLogger(__name__)
 
 # Limit file size to 10MB to prevent DoS
 MAX_FILE_SIZE = 10 * 1024 * 1024
+
+# Instantiate Database Service
+# We do this at module level to cache TableClients across function invocations in the same process
+db_service = db.DatabaseService()
+blob_service = storage.BlobService()
+queue_service = storage.QueueService()
+email_service = rmanalyzer.email.EmailService()
+email_renderer = rmanalyzer.email.EmailRenderer()
 
 
 def _get_user_email(req: func.HttpRequest) -> str | None:
@@ -90,21 +99,21 @@ def handle_upload_async(req: func.HttpRequest) -> func.HttpResponse:
         return func.HttpResponse("Unauthorized", status_code=HTTPStatus.UNAUTHORIZED)
 
     try:
-        # 1. Extract File
+        # Extract File
         filename, content, error_resp = _get_uploaded_file_content(req)
         if error_resp:
             return error_resp
 
-        # 2. Upload to Blob Storage
+        # Upload to Blob Storage
         # Generate a unique name to avoid overwrites (though blob_utils handles it, good practice)
         base_name = os.path.basename(filename)
         blob_name = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{base_name}"
 
-        blob_url = storage.upload_csv(blob_name, content)
+        blob_url = blob_service.upload_csv(blob_name, content)
         logging.info("Uploaded blob: %s", blob_url)
 
-        # 3. Enqueue Message
-        storage.enqueue_message({"blob_name": blob_name})
+        # Enqueue Message
+        queue_service.enqueue_message({"blob_name": blob_name})
         logging.info("Enqueued processing message for: %s", blob_name)
 
         return func.HttpResponse(
@@ -134,39 +143,32 @@ def process_queue_item(msg: func.QueueMessage) -> None:
             logging.error("Invalid message: missing blob_name")
             return
 
-        # 1. Download CSV
-        csv_content = storage.download_csv(blob_name)
+        # Download CSV
+        csv_content = blob_service.download_csv(blob_name)
 
-        # 3. Analysis
+        # Analysis
         transactions, errors = get_transactions(csv_content)
 
         # Retrieve People from DB
-        people_data = db.get_all_people()
+        people_data = db_service.get_all_people()
         members = [Person.from_config(p) for p in people_data]
 
         if errors and len(transactions) == 0:
             logging.error("CSV Validation Errors: %s", errors)
 
             # Send Error Email
-            sender = os.environ.get("SENDER_EMAIL")
-
             # Send to all members logic, mirroring summary email logic.
             recipients = [p.email for p in members]
-
-            if sender:
-                send_error_email(sender, recipients, errors)
-            else:
-                logging.error("Sender email not configured, cannot send error email.")
-
+            email_service.send_error_email(recipients, errors)
             return
 
-        # 4. Save to DB
+        # Save to DB
         try:
-            db.save_transactions(transactions)
+            db_service.save_transactions(transactions)
         except Exception as e:  # pylint: disable=broad-exception-caught
             logging.error("Failed to save transactions to DB: %s", e)
 
-        # 5. Email
+        # Email
         # Re-using members fetched above
         group = Group(members)
         group.add_transactions(transactions)
@@ -175,22 +177,11 @@ def process_queue_item(msg: func.QueueMessage) -> None:
             logging.warning("No valid transactions found for configured accounts.")
             return
 
-        sender = os.environ.get("SENDER_EMAIL")
-        endpoint = os.environ.get("COMMUNICATION_SERVICES_ENDPOINT")
-
-        if not sender:
-            logging.error("Sender email not configured.")
-            return
-
-        if not endpoint:
-            logging.error("Communication Services Endpoint not configured.")
-            return
-
-        body = render_body(group, errors=errors)
-        subject = render_subject(group)
+        body = email_renderer.render_body(group, errors=errors)
+        subject = email_renderer.render_subject(group)
         recipients = [p.email for p in group.members]
 
-        send_email(endpoint, sender, recipients, subject, body)
+        email_service.send_email(recipients, subject, body)
 
         logging.info("Processing complete for %s", blob_name)
 
@@ -198,6 +189,42 @@ def process_queue_item(msg: func.QueueMessage) -> None:
         logging.error("Error processing queue item: %s", e)
         # Raising exception ensures the message goes to poison queue after retries
         raise
+
+
+def _handle_savings_get(
+    _: func.HttpRequest, month: str, user_email: str
+) -> func.HttpResponse:
+    """Helper for GET savings request."""
+    data = db_service.get_savings(month, user_email)
+    if data is None:
+        return func.HttpResponse("Not Found", status_code=HTTPStatus.NOT_FOUND)
+
+    return func.HttpResponse(
+        json.dumps(data),
+        mimetype="application/json",
+        status_code=HTTPStatus.OK,
+    )
+
+
+def _handle_savings_post(
+    req: func.HttpRequest, month: str, user_email: str
+) -> func.HttpResponse:
+    """Helper for POST savings request."""
+    try:
+        req_body = req.get_json()
+    except ValueError:
+        return func.HttpResponse("Invalid JSON", status_code=HTTPStatus.BAD_REQUEST)
+
+    target_month = req_body.get("month", month)
+
+    # Basic validation (allow empty items, but check structure)
+    if "startingBalance" not in req_body:
+        return func.HttpResponse(
+            "Missing required fields", status_code=HTTPStatus.BAD_REQUEST
+        )
+
+    db_service.save_savings(target_month, req_body, user_email)
+    return func.HttpResponse("Saved successfully", status_code=HTTPStatus.OK)
 
 
 def handle_savings_dbrequest(req: func.HttpRequest) -> func.HttpResponse:
@@ -211,37 +238,13 @@ def handle_savings_dbrequest(req: func.HttpRequest) -> func.HttpResponse:
     try:
         # Default month to current month if not provided
         current_month = datetime.now().strftime("%Y-%m")
+        month = req.params.get("month", current_month)
 
         if req.method == "GET":
-            month = req.params.get("month", current_month)
-            data = db.get_savings(month, user_email)
-            if data is None:
-                return func.HttpResponse("Not Found", status_code=HTTPStatus.NOT_FOUND)
-
-            return func.HttpResponse(
-                json.dumps(data),
-                mimetype="application/json",
-                status_code=HTTPStatus.OK,
-            )
+            return _handle_savings_get(req, month, user_email)
 
         if req.method == "POST":
-            try:
-                req_body = req.get_json()
-            except ValueError:
-                return func.HttpResponse(
-                    "Invalid JSON", status_code=HTTPStatus.BAD_REQUEST
-                )
-
-            month = req_body.get("month", current_month)
-
-            # Basic validation (allow empty items, but check structure)
-            if "startingBalance" not in req_body:
-                return func.HttpResponse(
-                    "Missing required fields", status_code=HTTPStatus.BAD_REQUEST
-                )
-
-            db.save_savings(month, req_body, user_email)
-            return func.HttpResponse("Saved successfully", status_code=HTTPStatus.OK)
+            return _handle_savings_post(req, month, user_email)
 
     except Exception as e:  # pylint: disable=broad-exception-caught
         logging.error("Error in savings handler: %s", e)

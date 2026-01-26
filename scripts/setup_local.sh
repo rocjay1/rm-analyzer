@@ -43,4 +43,4 @@ fi
 source .venv/bin/activate
 pip install -r requirements.txt
 
-echo "Setup complete! You can now run ./run_local.sh"
+echo "Setup complete! You can now run ./scripts/run_local.sh"

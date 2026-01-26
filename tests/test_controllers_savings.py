@@ -44,7 +44,7 @@ class TestSavingsController(unittest.TestCase):
         resp = handle_savings_dbrequest(self.req)
         self.assertEqual(resp.status_code, 401)
 
-    @patch("rmanalyzer.db.get_savings")
+    @patch("rmanalyzer.controllers.db_service.get_savings")
     def test_handle_savings_get_success(self, mock_get):
         self._set_auth_header("user@test.com")
         self.req.method = "GET"
@@ -58,7 +58,7 @@ class TestSavingsController(unittest.TestCase):
         mock_get.assert_called_with("2023-10", "user@test.com")
         self.assertIn("100", resp.get_body().decode())
 
-    @patch("rmanalyzer.db.save_savings")
+    @patch("rmanalyzer.controllers.db_service.save_savings")
     def test_handle_savings_post_success(self, mock_save):
         self._set_auth_header("user@test.com")
         self.req.method = "POST"
@@ -69,6 +69,7 @@ class TestSavingsController(unittest.TestCase):
 
         self.assertEqual(resp.status_code, 200)
         mock_save.assert_called_with("2023-10", body, "user@test.com")
+
 
 if __name__ == "__main__":
     unittest.main()

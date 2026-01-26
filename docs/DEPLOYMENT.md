@@ -61,6 +61,14 @@ Managed automatically by Terraform, but key settings include:
 
 - `COMMUNICATION_SERVICES_ENDPOINT`: For sending emails.
 - `SENDER_EMAIL`: Verified sender address from Communication Services.
+- `BLOB_SERVICE_URL`: Endpoint for Blob storage (e.g. `https://<account>.blob.core.windows.net/`).
+- `QUEUE_SERVICE_URL`: Endpoint for Queue storage (e.g. `https://<account>.queue.core.windows.net/`).
+- `TABLE_SERVICE_URL`: Endpoint for Table storage (e.g. `https://<account>.table.core.windows.net/`).
+- `BLOB_CONTAINER_NAME`: Name of container for CSVs (defaults to `csv-uploads`).
+- `QUEUE_NAME`: Name of the processing queue (defaults to `csv-processing`).
+- `TRANSACTIONS_TABLE`: Table name for transaction data (defaults to `transactions`).
+- `SAVINGS_TABLE`: Table name for savings data (defaults to `savings`).
+- `PEOPLE_TABLE`: Table name for user/people data (defaults to `people`).
 - `AzureWebJobsStorage`: Connection string for internal Function App operation.
 
 ### CI/CD Secrets
