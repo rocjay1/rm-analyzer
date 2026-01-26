@@ -25,6 +25,12 @@ class TestStorageConfig(unittest.TestCase):
             "BLOB_CONTAINER_NAME",
             "QUEUE_NAME",
         ]:
+        for key in [
+            "BLOB_SERVICE_URL",
+            "QUEUE_SERVICE_URL",
+            "BLOB_CONTAINER_NAME",
+            "QUEUE_NAME",
+        ]:
             if key in os.environ:
                 del os.environ[key]
 
@@ -38,6 +44,7 @@ class TestStorageConfig(unittest.TestCase):
         """Test that ValueError is raised when BLOB_SERVICE_URL is missing."""
         with self.assertRaises(ValueError) as cm:
             BlobService()
+            BlobService()
         self.assertIn("BLOB_SERVICE_URL", str(cm.exception))
 
     @patch("rmanalyzer.services.BlobServiceClient")
@@ -46,10 +53,15 @@ class TestStorageConfig(unittest.TestCase):
         os.environ["BLOB_SERVICE_URL"] = "http://127.0.0.1:10000/devstoreaccount1"
 
         service = BlobService()
+        service = BlobService()
         # pylint: disable=protected-access
+        service._get_blob_service_client()
         service._get_blob_service_client()
 
         _, kwargs = mock_blob_client.call_args
+        self.assertEqual(
+            kwargs["account_url"], "http://127.0.0.1:10000/devstoreaccount1"
+        )
         self.assertEqual(
             kwargs["account_url"], "http://127.0.0.1:10000/devstoreaccount1"
         )
@@ -68,7 +80,9 @@ class TestStorageConfig(unittest.TestCase):
         mock_credential.return_value = mock_cred_instance
 
         service = BlobService()
+        service = BlobService()
         # pylint: disable=protected-access
+        service._get_blob_service_client()
         service._get_blob_service_client()
 
         _, kwargs = mock_blob_client.call_args
@@ -93,6 +107,7 @@ class TestStorageConfig(unittest.TestCase):
         """Test that ValueError is raised when QUEUE_SERVICE_URL is missing."""
         with self.assertRaises(ValueError) as cm:
             QueueService()
+            QueueService()
         self.assertIn("QUEUE_SERVICE_URL", str(cm.exception))
 
     @patch("rmanalyzer.services.QueueClient")
@@ -100,12 +115,18 @@ class TestStorageConfig(unittest.TestCase):
         """Test that http:// URL uses Azurite credentials."""
         os.environ["QUEUE_SERVICE_URL"] = "http://127.0.0.1:10001/devstoreaccount1"
         os.environ["QUEUE_NAME"] = "test-queue"
+        os.environ["QUEUE_NAME"] = "test-queue"
 
+        service = QueueService()
         service = QueueService()
         # pylint: disable=protected-access
         service._get_queue_client("test-queue")
 
         _, kwargs = mock_queue_client.call_args
+        self.assertEqual(
+            kwargs["account_url"], "http://127.0.0.1:10001/devstoreaccount1"
+        )
+        self.assertEqual(kwargs["queue_name"], "test-queue")
         self.assertEqual(
             kwargs["account_url"], "http://127.0.0.1:10001/devstoreaccount1"
         )
@@ -122,16 +143,20 @@ class TestStorageConfig(unittest.TestCase):
         os.environ["QUEUE_SERVICE_URL"] = prod_url
         # Test Default Queue Name
         # Not setting QUEUE_NAME env var
+        # Test Default Queue Name
+        # Not setting QUEUE_NAME env var
 
         mock_cred_instance = MagicMock()
         mock_credential.return_value = mock_cred_instance
 
+        service = QueueService()
         service = QueueService()
         # pylint: disable=protected-access
         service._get_queue_client("csv-processing")
 
         _, kwargs = mock_queue_client.call_args
         self.assertEqual(kwargs["account_url"], prod_url)
+        self.assertEqual(kwargs["queue_name"], "csv-processing")
         self.assertEqual(kwargs["queue_name"], "csv-processing")
         # Should use the credential instance from DefaultAzureCredential()
         self.assertIs(kwargs["credential"], mock_cred_instance)

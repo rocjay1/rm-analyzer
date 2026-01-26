@@ -29,6 +29,7 @@ class TestDBConfig(unittest.TestCase):
         """Test that ValueError is raised during init when TABLE_SERVICE_URL is missing."""
         with self.assertRaises(ValueError) as cm:
             DatabaseService()
+            DatabaseService()
         self.assertIn("TABLE_SERVICE_URL", str(cm.exception))
 
     @patch("rmanalyzer.services.TableClient")
@@ -37,7 +38,9 @@ class TestDBConfig(unittest.TestCase):
         os.environ["TABLE_SERVICE_URL"] = "http://127.0.0.1:10002/devstoreaccount1"
 
         service = DatabaseService()
+        service = DatabaseService()
         # pylint: disable=protected-access
+        service._get_table_client("test_table")
         service._get_table_client("test_table")
 
         # Check that TableClient was initialized with AzureNamedKeyCredential
@@ -56,7 +59,9 @@ class TestDBConfig(unittest.TestCase):
         mock_credential.return_value = mock_cred_instance
 
         service = DatabaseService()
+        service = DatabaseService()
         # pylint: disable=protected-access
+        service._get_table_client("test_table")
         service._get_table_client("test_table")
 
         _, kwargs = mock_table_client.call_args

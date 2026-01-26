@@ -1,7 +1,9 @@
 import unittest
 from unittest.mock import patch
+from unittest.mock import patch
 from datetime import date
 from decimal import Decimal
+import os
 import os
 
 from rmanalyzer.services import EmailService, EmailRenderer
@@ -28,12 +30,16 @@ class TestEmailer(unittest.TestCase):
     def test_render_body(self):
         """Test rendering the email body using EmailRenderer."""
         body = EmailRenderer.render_body(self.group)
+        """Test rendering the email body using EmailRenderer."""
+        body = EmailRenderer.render_body(self.group)
         self.assertIn("Alice", body)
         self.assertIn("10.00", body)
         self.assertIn("html", body)
         self.assertIn("Difference", body)
 
     def test_render_body_with_errors(self):
+        """Test rendering body content with validation errors using EmailRenderer."""
+        body = EmailRenderer.render_body(self.group, errors=["Error 1", "Error 2"])
         """Test rendering body content with validation errors using EmailRenderer."""
         body = EmailRenderer.render_body(self.group, errors=["Error 1", "Error 2"])
         self.assertIn("Warning: Some transactions were skipped", body)
@@ -47,8 +53,15 @@ class TestEmailer(unittest.TestCase):
         self.assertIn("Upload Failed", body)
         self.assertIn("Critical Error", body)
 
+    def test_render_error_body(self):
+        """Test rendering error email body."""
+        body = EmailRenderer.render_error_body(["Critical Error"])
+        self.assertIn("Upload Failed", body)
+        self.assertIn("Critical Error", body)
+
     def test_render_subject(self):
         """Test generating the email subject."""
+        subject = EmailRenderer.render_subject(self.group)
         subject = EmailRenderer.render_subject(self.group)
         self.assertIn("Transactions Summary", subject)
         self.assertIn("08/01/25", subject)
@@ -63,12 +76,20 @@ class TestEmailer(unittest.TestCase):
         )
         os.environ["SENDER_EMAIL"] = "sender@example.com"
 
+        # Set env vars for service
+        os.environ["COMMUNICATION_SERVICES_ENDPOINT"] = (
+            "https://test.communication.azure.com"
+        )
+        os.environ["SENDER_EMAIL"] = "sender@example.com"
+
         mock_poller = unittest.mock.Mock()
         mock_poller.result.return_value = {"messageId": "test_id"}
 
         mock_client_instance = mock_email_client.return_value
         mock_client_instance.begin_send.return_value = mock_poller
 
+        service = EmailService()
+        service.send_email(["alice@example.com"], "Test Subject", "Test Body")
         service = EmailService()
         service.send_email(["alice@example.com"], "Test Subject", "Test Body")
 
