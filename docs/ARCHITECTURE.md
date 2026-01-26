@@ -46,10 +46,11 @@ This document describes the architecture of the `rm-analyzer` system, which is d
 * **Tech Stack**: Python, Azure Functions (Flex Consumption)
 * **Key Modules**:
   * `rmanalyzer.controllers`: HTTP and Queue triggers / orchestration logic.
-  * `rmanalyzer.models`: Core domain logic (Transactions, People, Groups, Splits).
-  * `rmanalyzer.db`: Data access layer for Azure Table Storage.
-  * `rmanalyzer.email`: Email composition and sending via Azure Communication Services.
-  * `rmanalyzer.storage`: Blob and Queue operations.
+  * `rmanalyzer.models`: Core domain logic (Transactions, People, Groups) implemented as Python dataclasses.
+  * `rmanalyzer.db`: `DatabaseService` for Azure Table Storage (Transactions, Savings, People).
+  * `rmanalyzer.email`: `EmailRenderer` and `EmailService` for ACS Email.
+  * `rmanalyzer.storage`: `BlobService` and `QueueService` for Azure Storage.
+  * `rmanalyzer.utils`: Shared utilities for CSV parsing, date handling, and formatting.
 
 ### 4.3 Infrastructure
 
@@ -64,8 +65,10 @@ This document describes the architecture of the `rm-analyzer` system, which is d
 
 ## 5. Data Model
 <!-- Describe key data entities and schemas. -->
-* **Transaction**: [Fields: Date, Amount, Description...]
-* **Report**: [Fields: ID, GeneratedDate, Status...]
+* **Transaction**: (Dataclass) Date, Name, Account Number, Amount (Decimal), Category (Enum), IgnoredFrom (Enum).
+* **Person**: (Dataclass) Name, Email, Account Numbers, Transactions list.
+* **Group**: (Dataclass) Collection of People, handles splitting logic.
+* **Savings**: (Table Entity) Monthly summary and itemized savings entries.
 
 ## 6. Security & Compliance
 <!-- Authentication, Authorization, Data Privacy. -->
@@ -79,5 +82,6 @@ This document describes the architecture of the `rm-analyzer` system, which is d
 
 ## 8. Decision Log (ADRs)
 <!-- Keep track of major architectural decisions here. -->
-* [Date] - Chosen Python for backend due to library support for data analysis.
-* [Date] - Chosen Terraform for consistent infrastructure management.
+* [2026-01-26] - Migrated domain models (Transaction, Person, Group) to Python dataclasses for better type safety and immutability.
+* [2026-01-26] - Refactored storage and database interactions into `Service` classes to encapsulate configuration (e.g., table/container names) and support dependency injection.
+* [2026-01-26] - Consolidated parsing logic and helper functions into `rmanalyzer.utils` to improve maintainability and reuse across triggers.

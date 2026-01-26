@@ -23,8 +23,8 @@ Local Development
 -----------------
 
 1. **Prerequisites**: Ensure you have Python 3.11+, Node.js, Azure Functions Core Tools, and Azurite installed.
-2. **Setup**: Run `./setup_local.sh` to install python dependencies and setup the environment.
-3. **Run**: Execute `./run_local.sh` to start the local development environment:
+2. **Setup**: Run `./scripts/setup_local.sh` to install python dependencies and setup the environment.
+3. **Run**: Execute `./scripts/run_local.sh` to start the local development environment:
     - **Frontend**: <http://localhost:4280>
     - **Backend API**: <http://localhost:7071>
     - **Blob Storage Emulator**: <http://127.0.0.1:10000>
