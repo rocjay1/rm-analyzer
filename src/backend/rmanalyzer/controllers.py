@@ -10,8 +10,8 @@ from datetime import datetime
 from http import HTTPStatus
 
 import azure.functions as func
+import rmanalyzer.email
 from rmanalyzer import db, storage
-from rmanalyzer.email import render_body, render_subject, send_email, send_error_email
 from rmanalyzer.models import Group, Person, get_transactions
 
 __all__ = [
@@ -29,6 +29,10 @@ MAX_FILE_SIZE = 10 * 1024 * 1024
 # Instantiate Database Service
 # We do this at module level to cache TableClients across function invocations in the same process
 db_service = db.DatabaseService()
+blob_service = storage.BlobService()
+queue_service = storage.QueueService()
+email_service = rmanalyzer.email.EmailService()
+email_renderer = rmanalyzer.email.EmailRenderer()
 
 
 def _get_user_email(req: func.HttpRequest) -> str | None:
@@ -104,11 +108,11 @@ def handle_upload_async(req: func.HttpRequest) -> func.HttpResponse:
         base_name = os.path.basename(filename)
         blob_name = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{base_name}"
 
-        blob_url = storage.upload_csv(blob_name, content)
+        blob_url = blob_service.upload_csv(blob_name, content)
         logging.info("Uploaded blob: %s", blob_url)
 
         # 3. Enqueue Message
-        storage.enqueue_message({"blob_name": blob_name})
+        queue_service.enqueue_message({"blob_name": blob_name})
         logging.info("Enqueued processing message for: %s", blob_name)
 
         return func.HttpResponse(
@@ -139,7 +143,7 @@ def process_queue_item(msg: func.QueueMessage) -> None:
             return
 
         # 1. Download CSV
-        csv_content = storage.download_csv(blob_name)
+        csv_content = blob_service.download_csv(blob_name)
 
         # 3. Analysis
         transactions, errors = get_transactions(csv_content)
@@ -152,16 +156,9 @@ def process_queue_item(msg: func.QueueMessage) -> None:
             logging.error("CSV Validation Errors: %s", errors)
 
             # Send Error Email
-            sender = os.environ.get("SENDER_EMAIL")
-
             # Send to all members logic, mirroring summary email logic.
             recipients = [p.email for p in members]
-
-            if sender:
-                send_error_email(sender, recipients, errors)
-            else:
-                logging.error("Sender email not configured, cannot send error email.")
-
+            email_service.send_error_email(recipients, errors)
             return
 
         # 4. Save to DB
@@ -179,22 +176,11 @@ def process_queue_item(msg: func.QueueMessage) -> None:
             logging.warning("No valid transactions found for configured accounts.")
             return
 
-        sender = os.environ.get("SENDER_EMAIL")
-        endpoint = os.environ.get("COMMUNICATION_SERVICES_ENDPOINT")
-
-        if not sender:
-            logging.error("Sender email not configured.")
-            return
-
-        if not endpoint:
-            logging.error("Communication Services Endpoint not configured.")
-            return
-
-        body = render_body(group, errors=errors)
-        subject = render_subject(group)
+        body = email_renderer.render_body(group, errors=errors)
+        subject = email_renderer.render_subject(group)
         recipients = [p.email for p in group.members]
 
-        send_email(endpoint, sender, recipients, subject, body)
+        email_service.send_email(recipients, subject, body)
 
         logging.info("Processing complete for %s", blob_name)
 
