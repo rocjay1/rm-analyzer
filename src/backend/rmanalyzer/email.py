@@ -9,7 +9,8 @@ from typing import List, Optional
 from azure.communication.email import EmailClient
 from azure.identity import DefaultAzureCredential
 
-from .models import Category, Group, to_currency
+from .models import Category, Group
+from .utils import to_currency
 
 __all__ = ["EmailService", "EmailRenderer"]
 

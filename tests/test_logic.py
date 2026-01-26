@@ -12,6 +12,8 @@ from rmanalyzer.models import (
     IgnoredFrom,
     Person,
     Transaction,
+)
+from rmanalyzer.utils import (
     get_transactions,
     to_currency,
     to_transaction,

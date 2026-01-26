@@ -1,6 +1,7 @@
 import os
 import unittest
 from datetime import date
+from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
 from rmanalyzer.db import DatabaseService
@@ -22,10 +23,10 @@ class TestDB(unittest.TestCase):
     def test_generate_row_key(self):
         """Test that row keys are deterministic."""
         t1 = Transaction(
-            transact_date=date(2023, 1, 1),
+            date=date(2023, 1, 1),
             name="Test Transaction",
             account_number=1234,
-            amount="100.50",
+            amount=Decimal("100.50"),
             category=Category.DINING,
             ignore=IgnoredFrom.NOTHING,
         )
@@ -39,10 +40,10 @@ class TestDB(unittest.TestCase):
 
         # Same data should produce SAME key if index is default
         t2 = Transaction(
-            transact_date=date(2023, 1, 1),
+            date=date(2023, 1, 1),
             name="Test Transaction",
             account_number=1234,
-            amount="100.50",
+            amount=Decimal("100.50"),
             category=Category.GROCERIES,
             ignore=IgnoredFrom.BUDGET,
         )
@@ -60,10 +61,10 @@ class TestDB(unittest.TestCase):
         self.db_service._get_table_client = MagicMock(return_value=mock_client)
 
         t = Transaction(
-            transact_date=date(2023, 10, 15),
+            date=date(2023, 10, 15),
             name="Grocery Store",
             account_number=5678,
-            amount="50.0",
+            amount=Decimal("50.0"),
             category=Category.GROCERIES,
             ignore=IgnoredFrom.NOTHING,
         )

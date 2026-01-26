@@ -12,7 +12,8 @@ from http import HTTPStatus
 import azure.functions as func
 import rmanalyzer.email
 from rmanalyzer import db, storage
-from rmanalyzer.models import Group, Person, get_transactions
+from rmanalyzer.models import Group, Person
+from rmanalyzer.utils import get_transactions
 
 __all__ = [
     "handle_upload_async",
