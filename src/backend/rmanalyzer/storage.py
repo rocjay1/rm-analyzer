@@ -104,7 +104,7 @@ class QueueService:
         if self._queue_client:
             return self._queue_client
 
-        # Check for Local Dev / Azurite
+        # Check for Azurite for local development
         if self._queue_service_url.startswith("http://"):  # type: ignore
             # Azurite well-known credentials
             self._queue_client = QueueClient(
