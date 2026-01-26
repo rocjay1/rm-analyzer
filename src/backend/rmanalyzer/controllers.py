@@ -26,6 +26,10 @@ logger = logging.getLogger(__name__)
 # Limit file size to 10MB to prevent DoS
 MAX_FILE_SIZE = 10 * 1024 * 1024
 
+# Instantiate Database Service
+# We do this at module level to cache TableClients across function invocations in the same process
+db_service = db.DatabaseService()
+
 
 def _get_user_email(req: func.HttpRequest) -> str | None:
     """
@@ -141,7 +145,7 @@ def process_queue_item(msg: func.QueueMessage) -> None:
         transactions, errors = get_transactions(csv_content)
 
         # Retrieve People from DB
-        people_data = db.get_all_people()
+        people_data = db_service.get_all_people()
         members = [Person.from_config(p) for p in people_data]
 
         if errors and len(transactions) == 0:
@@ -162,7 +166,7 @@ def process_queue_item(msg: func.QueueMessage) -> None:
 
         # 4. Save to DB
         try:
-            db.save_transactions(transactions)
+            db_service.save_transactions(transactions)
         except Exception as e:  # pylint: disable=broad-exception-caught
             logging.error("Failed to save transactions to DB: %s", e)
 
@@ -214,7 +218,7 @@ def handle_savings_dbrequest(req: func.HttpRequest) -> func.HttpResponse:
 
         if req.method == "GET":
             month = req.params.get("month", current_month)
-            data = db.get_savings(month, user_email)
+            data = db_service.get_savings(month, user_email)
             if data is None:
                 return func.HttpResponse("Not Found", status_code=HTTPStatus.NOT_FOUND)
 
@@ -240,7 +244,7 @@ def handle_savings_dbrequest(req: func.HttpRequest) -> func.HttpResponse:
                     "Missing required fields", status_code=HTTPStatus.BAD_REQUEST
                 )
 
-            db.save_savings(month, req_body, user_email)
+            db_service.save_savings(month, req_body, user_email)
             return func.HttpResponse("Saved successfully", status_code=HTTPStatus.OK)
 
     except Exception as e:  # pylint: disable=broad-exception-caught

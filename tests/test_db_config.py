@@ -1,14 +1,17 @@
 """
 Tests for database configuration and connection logic.
 """
+
 import unittest
 from unittest.mock import patch, MagicMock
 import os
 from azure.core.credentials import AzureNamedKeyCredential
-from rmanalyzer import db
+from rmanalyzer.db import DatabaseService
+
 
 class TestDBConfig(unittest.TestCase):
     """Test suite for database configuration logic."""
+
     def setUp(self):
         # Save original environment to restore later
         self.original_env = dict(os.environ)
@@ -22,12 +25,10 @@ class TestDBConfig(unittest.TestCase):
         os.environ.update(self.original_env)
 
     @patch("rmanalyzer.db.TableClient")
-    def test_get_table_client_missing_url(self, _):
-        """Test that ValueError is raised when TABLE_SERVICE_URL is missing."""
-        # Ensure fallback is also missing (though logic should ignore it per new requirements)
+    def test_init_missing_url(self, _):
+        """Test that ValueError is raised during init when TABLE_SERVICE_URL is missing."""
         with self.assertRaises(ValueError) as cm:
-            # pylint: disable=protected-access
-            db._get_table_client("test_table")
+            DatabaseService()
         self.assertIn("TABLE_SERVICE_URL", str(cm.exception))
 
     @patch("rmanalyzer.db.TableClient")
@@ -35,8 +36,9 @@ class TestDBConfig(unittest.TestCase):
         """Test that http:// URL uses Azurite credentials."""
         os.environ["TABLE_SERVICE_URL"] = "http://127.0.0.1:10002/devstoreaccount1"
 
+        service = DatabaseService()
         # pylint: disable=protected-access
-        db._get_table_client("test_table")
+        service._get_table_client("test_table")
 
         # Check that TableClient was initialized with AzureNamedKeyCredential
         _, kwargs = mock_table_client.call_args
@@ -53,8 +55,9 @@ class TestDBConfig(unittest.TestCase):
         mock_cred_instance = MagicMock()
         mock_credential.return_value = mock_cred_instance
 
+        service = DatabaseService()
         # pylint: disable=protected-access
-        db._get_table_client("test_table")
+        service._get_table_client("test_table")
 
         _, kwargs = mock_table_client.call_args
         self.assertEqual(kwargs["endpoint"], prod_url)
@@ -62,6 +65,23 @@ class TestDBConfig(unittest.TestCase):
         # Note: The implementation in db.py creates DefaultAzureCredential() inside the function
         # We patch the class to return our mock
         self.assertIs(kwargs["credential"], mock_cred_instance)
+
+    @patch("rmanalyzer.db.TableClient")
+    def test_get_table_client_cached(self, mock_table_client):
+        """Test that TableClient is cached."""
+        os.environ["TABLE_SERVICE_URL"] = "http://127.0.0.1:10002/devstoreaccount1"
+        service = DatabaseService()
+
+        # First call
+        client1 = service._get_table_client("test_table")
+
+        # Second call
+        client2 = service._get_table_client("test_table")
+
+        self.assertIs(client1, client2)
+        # Should only be called once (created once)
+        mock_table_client.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()
