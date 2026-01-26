@@ -17,7 +17,6 @@ from .utils import AZURE_DEV_ACCOUNT_KEY
 
 __all__ = [
     "BlobService",
-    "BlobService",
     "QueueService",
 ]
 
@@ -28,9 +27,10 @@ class BlobService:
     """Service for interacting with Azure Blob Storage."""
 
     def __init__(self) -> None:
-        self._blob_service_url = os.environ.get("BLOB_SERVICE_URL")
-        if not self._blob_service_url:
+        blob_service_url = os.environ.get("BLOB_SERVICE_URL")
+        if not blob_service_url:
             raise ValueError("BLOB_SERVICE_URL environment variable is not set.")
+        self._blob_service_url: str = blob_service_url
 
         self._container_name = os.environ.get("BLOB_CONTAINER_NAME", "csv-uploads")
         self._blob_client: BlobServiceClient | None = None
@@ -41,16 +41,17 @@ class BlobService:
             return self._blob_client
 
         # Check for Azurite for local development
-        if self._blob_service_url.startswith("http://"):  # type: ignore
+        if self._blob_service_url.startswith("http://"):
             # Azurite well-known credentials
             self._blob_client = BlobServiceClient(
-                account_url=self._blob_service_url,  # type: ignore
+                account_url=self._blob_service_url,
                 credential=AZURE_DEV_ACCOUNT_KEY,
             )
         else:
             # Production
             self._blob_client = BlobServiceClient(
-                account_url=self._blob_service_url, credential=DefaultAzureCredential()  # type: ignore
+                account_url=self._blob_service_url,
+                credential=DefaultAzureCredential(),
             )
         return self._blob_client
 
@@ -88,13 +89,14 @@ class BlobService:
         return download_stream.readall().decode("utf-8")
 
 
-class QueueService:
+class QueueService:  # pylint: disable=too-few-public-methods
     """Service for interacting with Azure Queue Storage."""
 
     def __init__(self) -> None:
-        self._queue_service_url = os.environ.get("QUEUE_SERVICE_URL")
-        if not self._queue_service_url:
+        queue_service_url = os.environ.get("QUEUE_SERVICE_URL")
+        if not queue_service_url:
             raise ValueError("QUEUE_SERVICE_URL environment variable is not set.")
+        self._queue_service_url: str = queue_service_url
 
         self._queue_name = os.environ.get("QUEUE_NAME", "csv-processing")
         self._queue_client: QueueClient | None = None
@@ -105,17 +107,17 @@ class QueueService:
             return self._queue_client
 
         # Check for Azurite for local development
-        if self._queue_service_url.startswith("http://"):  # type: ignore
+        if self._queue_service_url.startswith("http://"):
             # Azurite well-known credentials
             self._queue_client = QueueClient(
-                account_url=self._queue_service_url,  # type: ignore
+                account_url=self._queue_service_url,
                 queue_name=self._queue_name,
                 credential=AZURE_DEV_ACCOUNT_KEY,
             )
         else:
             # Production
             self._queue_client = QueueClient(
-                account_url=self._queue_service_url,  # type: ignore
+                account_url=self._queue_service_url,
                 queue_name=self._queue_name,
                 credential=DefaultAzureCredential(),
             )

@@ -55,18 +55,9 @@ class EmailRenderer:
         </html>
         """
 
-    @classmethod
-    def render_body(cls, group: Group, errors: Optional[List[str]] = None) -> str:
-        """Generate the HTML body of the email based on the group's expenses."""
-        tracked_categories = [c for c in Category if c != Category.OTHER]
-
-        # Build Table Headers
-        headers_html = "<th></th>"
-        for c in tracked_categories:
-            headers_html += f"<th>{c.value}</th>"
-        headers_html += "<th>Total</th>"
-
-        # Build Table Rows
+    @staticmethod
+    def _render_rows(group: Group, tracked_categories: List[Category]) -> str:
+        """Helper to render table rows."""
         rows_html = ""
         for p in group.members:
             row_cells = f"<td>{p.name}</td>"
@@ -85,14 +76,37 @@ class EmailRenderer:
                 diff_cells += (
                     f"<td>{to_currency(group.get_expenses_difference(p1, p2, c))}</td>"
                 )
-            diff_cells += f"<td style='font-weight: bold;'>{to_currency(group.get_expenses_difference(p1, p2))}</td>"
+            diff_cells += (
+                f"<td style='font-weight: bold;'>"
+                f"{to_currency(group.get_expenses_difference(p1, p2))}</td>"
+            )
             rows_html += f"<tr style='background-color: #f8f9fa;'>{diff_cells}</tr>"
+        return rows_html
+
+    @classmethod
+    def render_body(cls, group: Group, errors: Optional[List[str]] = None) -> str:
+        """Generate the HTML body of the email based on the group's expenses."""
+        tracked_categories: List[Category] = [
+            c for c in Category if c != Category.OTHER
+        ]
+
+        # Build Table Headers
+        headers_html = "<th></th>"
+        for c in tracked_categories:
+            headers_html += f"<th>{c.value}</th>"
+        headers_html += "<th>Total</th>"
+
+        # Build Table Rows
+        rows_html = cls._render_rows(group, tracked_categories)
 
         # Debt Message
         debt_html = ""
         if len(group.members) == 2:
             p1, p2 = group.members
-            msg = f"{p1.name} owes {p2.name}: <strong>{to_currency(group.get_debt(p1, p2))}</strong>"
+            msg = (
+                f"{p1.name} owes {p2.name}: "
+                f"<strong>{to_currency(group.get_debt(p1, p2))}</strong>"
+            )
             debt_html = f"""
             <div style="margin-top: 25px; font-size: 16px; background-color: #f0f6ff; padding: 15px; border-radius: 4px; border: 1px solid #c7e0f4; color: #005a9e; text-align: center;">
                 {msg}
@@ -161,7 +175,10 @@ class EmailRenderer:
         """Generate the email subject based on the transaction date range."""
         min_date = group.get_oldest_transaction()
         max_date = group.get_newest_transaction()
-        return f"Transactions Summary: {min_date.strftime('%m/%d/%y')} - {max_date.strftime('%m/%d/%y')}"
+        return (
+            f"Transactions Summary: {min_date.strftime('%m/%d/%y')} - "
+            f"{max_date.strftime('%m/%d/%y')}"
+        )
 
 
 class EmailService:
@@ -172,7 +189,8 @@ class EmailService:
         self._sender = os.environ.get("SENDER_EMAIL")
 
         if not self._endpoint:
-            # We don't raise here strictly to allow instantiation, but methods will fail or log error.
+            # We don't raise here strictly to allow instantiation, but methods
+            # will fail or log error.
             # However, sticking to pattern of other services:
             logger.warning(
                 "COMMUNICATION_SERVICES_ENDPOINT not set. Email functionality disabled."

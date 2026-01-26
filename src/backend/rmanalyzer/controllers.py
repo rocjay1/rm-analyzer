@@ -191,6 +191,42 @@ def process_queue_item(msg: func.QueueMessage) -> None:
         raise
 
 
+def _handle_savings_get(
+    _: func.HttpRequest, month: str, user_email: str
+) -> func.HttpResponse:
+    """Helper for GET savings request."""
+    data = db_service.get_savings(month, user_email)
+    if data is None:
+        return func.HttpResponse("Not Found", status_code=HTTPStatus.NOT_FOUND)
+
+    return func.HttpResponse(
+        json.dumps(data),
+        mimetype="application/json",
+        status_code=HTTPStatus.OK,
+    )
+
+
+def _handle_savings_post(
+    req: func.HttpRequest, month: str, user_email: str
+) -> func.HttpResponse:
+    """Helper for POST savings request."""
+    try:
+        req_body = req.get_json()
+    except ValueError:
+        return func.HttpResponse("Invalid JSON", status_code=HTTPStatus.BAD_REQUEST)
+
+    target_month = req_body.get("month", month)
+
+    # Basic validation (allow empty items, but check structure)
+    if "startingBalance" not in req_body:
+        return func.HttpResponse(
+            "Missing required fields", status_code=HTTPStatus.BAD_REQUEST
+        )
+
+    db_service.save_savings(target_month, req_body, user_email)
+    return func.HttpResponse("Saved successfully", status_code=HTTPStatus.OK)
+
+
 def handle_savings_dbrequest(req: func.HttpRequest) -> func.HttpResponse:
     """Handles getting and updating savings calculation data."""
     logging.info("Processing savings request.")
@@ -202,37 +238,13 @@ def handle_savings_dbrequest(req: func.HttpRequest) -> func.HttpResponse:
     try:
         # Default month to current month if not provided
         current_month = datetime.now().strftime("%Y-%m")
+        month = req.params.get("month", current_month)
 
         if req.method == "GET":
-            month = req.params.get("month", current_month)
-            data = db_service.get_savings(month, user_email)
-            if data is None:
-                return func.HttpResponse("Not Found", status_code=HTTPStatus.NOT_FOUND)
-
-            return func.HttpResponse(
-                json.dumps(data),
-                mimetype="application/json",
-                status_code=HTTPStatus.OK,
-            )
+            return _handle_savings_get(req, month, user_email)
 
         if req.method == "POST":
-            try:
-                req_body = req.get_json()
-            except ValueError:
-                return func.HttpResponse(
-                    "Invalid JSON", status_code=HTTPStatus.BAD_REQUEST
-                )
-
-            month = req_body.get("month", current_month)
-
-            # Basic validation (allow empty items, but check structure)
-            if "startingBalance" not in req_body:
-                return func.HttpResponse(
-                    "Missing required fields", status_code=HTTPStatus.BAD_REQUEST
-                )
-
-            db_service.save_savings(month, req_body, user_email)
-            return func.HttpResponse("Saved successfully", status_code=HTTPStatus.OK)
+            return _handle_savings_post(req, month, user_email)
 
     except Exception as e:  # pylint: disable=broad-exception-caught
         logging.error("Error in savings handler: %s", e)
