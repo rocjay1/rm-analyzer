@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, call, patch
 import os
-from rmanalyzer.db import DatabaseService
+from rmanalyzer.services import DatabaseService
 
 
 class TestSavingsDB(unittest.TestCase):

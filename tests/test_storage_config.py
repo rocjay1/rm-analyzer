@@ -5,8 +5,8 @@ Tests for storage configuration and connection logic.
 import unittest
 from unittest.mock import patch, MagicMock
 import os
-from azure.core.credentials import AzureNamedKeyCredential
-from rmanalyzer.storage import (
+
+from rmanalyzer.services import (
     BlobService,
     QueueService,
 )
@@ -33,14 +33,14 @@ class TestStorageConfig(unittest.TestCase):
         os.environ.clear()
         os.environ.update(self.original_env)
 
-    @patch("rmanalyzer.storage.BlobServiceClient")
+    @patch("rmanalyzer.services.BlobServiceClient")
     def test_init_blob_service_missing_url(self, _):
         """Test that ValueError is raised when BLOB_SERVICE_URL is missing."""
         with self.assertRaises(ValueError) as cm:
             BlobService()
         self.assertIn("BLOB_SERVICE_URL", str(cm.exception))
 
-    @patch("rmanalyzer.storage.BlobServiceClient")
+    @patch("rmanalyzer.services.BlobServiceClient")
     def test_get_blob_client_dev_url(self, mock_blob_client):
         """Test that http:// URL uses Azurite credentials."""
         os.environ["BLOB_SERVICE_URL"] = "http://127.0.0.1:10000/devstoreaccount1"
@@ -57,8 +57,8 @@ class TestStorageConfig(unittest.TestCase):
         # Check for Azurite default key
         self.assertTrue(kwargs["credential"].startswith("Eby8vdM02xNOcq"))
 
-    @patch("rmanalyzer.storage.DefaultAzureCredential")
-    @patch("rmanalyzer.storage.BlobServiceClient")
+    @patch("rmanalyzer.services.DefaultAzureCredential")
+    @patch("rmanalyzer.services.BlobServiceClient")
     def test_get_blob_client_prod_url(self, mock_blob_client, mock_credential):
         """Test that https:// URL uses DefaultAzureCredential."""
         prod_url = "https://mystorage.blob.core.windows.net/"
@@ -76,7 +76,7 @@ class TestStorageConfig(unittest.TestCase):
         # Should use the credential instance from DefaultAzureCredential()
         self.assertIs(kwargs["credential"], mock_cred_instance)
 
-    @patch("rmanalyzer.storage.BlobServiceClient")
+    @patch("rmanalyzer.services.BlobServiceClient")
     def test_get_blob_client_cached(self, mock_blob_client):
         """Test that BlobServiceClient is cached."""
         os.environ["BLOB_SERVICE_URL"] = "http://127.0.0.1:10000/devstoreaccount1"
@@ -88,14 +88,14 @@ class TestStorageConfig(unittest.TestCase):
         self.assertIs(client1, client2)
         mock_blob_client.assert_called_once()
 
-    @patch("rmanalyzer.storage.QueueClient")
+    @patch("rmanalyzer.services.QueueClient")
     def test_init_queue_service_missing_url(self, _):
         """Test that ValueError is raised when QUEUE_SERVICE_URL is missing."""
         with self.assertRaises(ValueError) as cm:
             QueueService()
         self.assertIn("QUEUE_SERVICE_URL", str(cm.exception))
 
-    @patch("rmanalyzer.storage.QueueClient")
+    @patch("rmanalyzer.services.QueueClient")
     def test_get_queue_client_dev_url(self, mock_queue_client):
         """Test that http:// URL uses Azurite credentials."""
         os.environ["QUEUE_SERVICE_URL"] = "http://127.0.0.1:10001/devstoreaccount1"
@@ -103,7 +103,7 @@ class TestStorageConfig(unittest.TestCase):
 
         service = QueueService()
         # pylint: disable=protected-access
-        service._get_queue_client()
+        service._get_queue_client("test-queue")
 
         _, kwargs = mock_queue_client.call_args
         self.assertEqual(
@@ -114,8 +114,8 @@ class TestStorageConfig(unittest.TestCase):
         # Check for Azurite default key
         self.assertTrue(kwargs["credential"].startswith("Eby8vdM02xNOcq"))
 
-    @patch("rmanalyzer.storage.DefaultAzureCredential")
-    @patch("rmanalyzer.storage.QueueClient")
+    @patch("rmanalyzer.services.DefaultAzureCredential")
+    @patch("rmanalyzer.services.QueueClient")
     def test_get_queue_client_prod_url(self, mock_queue_client, mock_credential):
         """Test that https:// URL uses DefaultAzureCredential."""
         prod_url = "https://mystorage.queue.core.windows.net/"
@@ -128,7 +128,7 @@ class TestStorageConfig(unittest.TestCase):
 
         service = QueueService()
         # pylint: disable=protected-access
-        service._get_queue_client()
+        service._get_queue_client("csv-processing")
 
         _, kwargs = mock_queue_client.call_args
         self.assertEqual(kwargs["account_url"], prod_url)
@@ -136,17 +136,20 @@ class TestStorageConfig(unittest.TestCase):
         # Should use the credential instance from DefaultAzureCredential()
         self.assertIs(kwargs["credential"], mock_cred_instance)
 
-    @patch("rmanalyzer.storage.QueueClient")
+    @patch("rmanalyzer.services.QueueClient")
     def test_get_queue_client_cached(self, mock_queue_client):
         """Test that QueueClient is cached."""
         os.environ["QUEUE_SERVICE_URL"] = "http://127.0.0.1:10001/devstoreaccount1"
         service = QueueService()
+        mock_queue_client.side_effect = lambda *args, **kwargs: MagicMock()
 
-        client1 = service._get_queue_client()
-        client2 = service._get_queue_client()
+        client1 = service._get_queue_client("queue-1")
+        client2 = service._get_queue_client("queue-1")
+        client3 = service._get_queue_client("queue-2")
 
         self.assertIs(client1, client2)
-        mock_queue_client.assert_called_once()
+        self.assertNotEqual(client1, client3)
+        self.assertEqual(mock_queue_client.call_count, 2)
 
 
 if __name__ == "__main__":

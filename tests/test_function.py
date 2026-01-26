@@ -40,8 +40,8 @@ class TestFunctionApp(unittest.TestCase):
         resp = upload(self.req)
         self.assertEqual(resp.status_code, 400)
 
-    @patch("rmanalyzer.controllers.blob_service.upload_csv")
-    @patch("rmanalyzer.controllers.queue_service.enqueue_message")
+    @patch("rmanalyzer.controller.controller.blob_service.upload_csv")
+    @patch("rmanalyzer.controller.controller.queue_service.enqueue_message")
     def test_success_async(
         self,
         mock_enqueue,

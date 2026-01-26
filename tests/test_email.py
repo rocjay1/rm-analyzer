@@ -4,7 +4,7 @@ from datetime import date
 from decimal import Decimal
 import os
 
-from rmanalyzer.email import EmailService, EmailRenderer
+from rmanalyzer.services import EmailService, EmailRenderer
 from rmanalyzer.models import Category, Group, IgnoredFrom, Person, Transaction
 
 
@@ -53,9 +53,9 @@ class TestEmailer(unittest.TestCase):
         self.assertIn("Transactions Summary", subject)
         self.assertIn("08/01/25", subject)
 
-    @patch("rmanalyzer.email.EmailClient")
-    @patch("rmanalyzer.email.DefaultAzureCredential")
-    def test_send_email_success(self, mock_credential, mock_email_client):
+    @patch("rmanalyzer.services.EmailClient")
+    @patch("rmanalyzer.services.DefaultAzureCredential")
+    def test_send_email_success(self, _, mock_email_client):
         """Test sending the email with valid configuration."""
         # Set env vars for service
         os.environ["COMMUNICATION_SERVICES_ENDPOINT"] = (
@@ -79,13 +79,10 @@ class TestEmailer(unittest.TestCase):
         self.assertEqual(message["recipients"]["to"][0]["address"], "alice@example.com")
         self.assertEqual(message["content"]["subject"], "Test Subject")
 
-    @patch("rmanalyzer.email.EmailClient")
-    def test_send_email_missing_config(self, mock_email_client):
-        """Test that send_email does nothing if config is missing."""
+    def test_init_missing_config(self):
+        """Test that EmailService raises ValueError if config is missing."""
         if "COMMUNICATION_SERVICES_ENDPOINT" in os.environ:
             del os.environ["COMMUNICATION_SERVICES_ENDPOINT"]
 
-        service = EmailService()
-        service.send_email(["to"], "sub", "body")
-
-        mock_email_client.assert_not_called()
+        with self.assertRaises(ValueError):
+            EmailService()
