@@ -11,17 +11,7 @@ class TestSavingsDB(unittest.TestCase):
         )
         self.env_patcher.start()
         self.db_service = DatabaseService()
-        self.env_patcher = patch.dict(
-            os.environ, {"TABLE_SERVICE_URL": "http://localhost:10002"}
-        )
-        self.env_patcher.start()
-        self.db_service = DatabaseService()
         self.mock_client = MagicMock()
-        # Mock _get_table_client on the instance
-        self.db_service._get_table_client = MagicMock(return_value=self.mock_client)
-
-    def tearDown(self):
-        self.env_patcher.stop()
         # Mock _get_table_client on the instance
         self.db_service._get_table_client = MagicMock(return_value=self.mock_client)
 
@@ -40,7 +30,6 @@ class TestSavingsDB(unittest.TestCase):
             "items": [{"name": "Rent", "cost": 1500}, {"name": "Food", "cost": 500}],
         }
 
-        self.db_service.save_savings(month, data, user)
         self.db_service.save_savings(month, data, user)
 
         # Verify submit_transaction called
@@ -88,7 +77,6 @@ class TestSavingsDB(unittest.TestCase):
 
         self.mock_client.query_entities.return_value = mock_entities
 
-        result = self.db_service.get_savings(month, user)
         result = self.db_service.get_savings(month, user)
 
         self.assertEqual(result["startingBalance"], 2000.0)

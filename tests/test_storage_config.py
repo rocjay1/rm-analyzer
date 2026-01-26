@@ -25,12 +25,6 @@ class TestStorageConfig(unittest.TestCase):
             "BLOB_CONTAINER_NAME",
             "QUEUE_NAME",
         ]:
-        for key in [
-            "BLOB_SERVICE_URL",
-            "QUEUE_SERVICE_URL",
-            "BLOB_CONTAINER_NAME",
-            "QUEUE_NAME",
-        ]:
             if key in os.environ:
                 del os.environ[key]
 
