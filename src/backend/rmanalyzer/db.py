@@ -17,14 +17,11 @@ from azure.identity import DefaultAzureCredential
 
 from .models import Transaction
 
+from .utils import AZURE_DEV_ACCOUNT_KEY
+
 __all__ = ["DatabaseService"]
 
 logger = logging.getLogger(__name__)
-
-# Environment variable set by our infrastructure
-TRANSACTIONS_TABLE = "transactions"
-SAVINGS_TABLE = "savings"
-PEOPLE_TABLE = "people"
 
 
 class DatabaseService:
@@ -35,6 +32,10 @@ class DatabaseService:
         self._table_service_url = os.environ.get("TABLE_SERVICE_URL")
         if not self._table_service_url:
             raise ValueError("TABLE_SERVICE_URL environment variable is not set.")
+
+        self._transactions_table = os.environ.get("TRANSACTIONS_TABLE", "transactions")
+        self._savings_table = os.environ.get("SAVINGS_TABLE", "savings")
+        self._people_table = os.environ.get("PEOPLE_TABLE", "people")
 
     def _get_table_client(self, table_name: str) -> TableClient:
         """Returns a TableClient, ensuring the table exists. Cached per instance."""
@@ -49,7 +50,7 @@ class DatabaseService:
                 table_name=table_name,
                 credential=AzureNamedKeyCredential(
                     "devstoreaccount1",
-                    "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
+                    AZURE_DEV_ACCOUNT_KEY,
                 ),
             )
         else:
@@ -87,7 +88,7 @@ class DatabaseService:
         if not transactions:
             return
 
-        client = self._get_table_client(TRANSACTIONS_TABLE)
+        client = self._get_table_client(self._transactions_table)
         timestamp = datetime.now().isoformat()
         # Default tenant for now
         tenant_id = "default"
@@ -145,7 +146,7 @@ class DatabaseService:
         """
         Retrieves savings data (Summary and Items) for a specific month and user.
         """
-        client = self._get_table_client(SAVINGS_TABLE)
+        client = self._get_table_client(self._savings_table)
         partition_key = f"{user_id}_{month}"
 
         entities = client.query_entities(
@@ -176,7 +177,7 @@ class DatabaseService:
         Attempts to use a single atomic transaction if operations <= 100.
         Otherwise, splits into multiple batches (atomicity not guaranteed across batches).
         """
-        client = self._get_table_client(SAVINGS_TABLE)
+        client = self._get_table_client(self._savings_table)
         partition_key = f"{user_id}_{month}"
 
         # Fetch existing entities to delete
@@ -258,7 +259,7 @@ class DatabaseService:
         Saves a person to the People table.
         person dict must have: Name, Email, Accounts (list[int]).
         """
-        client = self._get_table_client(PEOPLE_TABLE)
+        client = self._get_table_client(self._people_table)
 
         entity = {
             "PartitionKey": "PEOPLE",
@@ -280,7 +281,7 @@ class DatabaseService:
         Retrieves all people from the database.
         Returns a list of dicts with keys: Name, Email, Accounts (list[int]).
         """
-        client = self._get_table_client(PEOPLE_TABLE)
+        client = self._get_table_client(self._people_table)
         people = []
 
         try:

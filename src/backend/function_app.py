@@ -3,7 +3,7 @@ Azure Function App entry point for RMAnalyzer.
 """
 
 import azure.functions as func
-from rmanalyzer import controllers, storage
+from rmanalyzer import controllers
 
 app = func.FunctionApp()
 
@@ -22,7 +22,7 @@ def upload(req: func.HttpRequest) -> func.HttpResponse:
 
 
 @app.queue_trigger(
-    arg_name="msg", queue_name=storage.QUEUE_NAME, connection="StorageConnection"
+    arg_name="msg", queue_name="%QUEUE_NAME%", connection="StorageConnection"
 )
 def process_upload_queue(msg: func.QueueMessage) -> None:
     """Processes a queued upload message."""

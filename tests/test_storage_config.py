@@ -9,8 +9,6 @@ from azure.core.credentials import AzureNamedKeyCredential
 from rmanalyzer.storage import (
     BlobService,
     QueueService,
-    QUEUE_NAME,
-    BLOB_CONTAINER_NAME,
 )
 
 
@@ -21,7 +19,12 @@ class TestStorageConfig(unittest.TestCase):
         # Save original environment to restore later
         self.original_env = dict(os.environ)
         # Clear relevant env vars to ensure clean state
-        for key in ["BLOB_SERVICE_URL", "QUEUE_SERVICE_URL"]:
+        for key in [
+            "BLOB_SERVICE_URL",
+            "QUEUE_SERVICE_URL",
+            "BLOB_CONTAINER_NAME",
+            "QUEUE_NAME",
+        ]:
             if key in os.environ:
                 del os.environ[key]
 
@@ -96,6 +99,7 @@ class TestStorageConfig(unittest.TestCase):
     def test_get_queue_client_dev_url(self, mock_queue_client):
         """Test that http:// URL uses Azurite credentials."""
         os.environ["QUEUE_SERVICE_URL"] = "http://127.0.0.1:10001/devstoreaccount1"
+        os.environ["QUEUE_NAME"] = "test-queue"
 
         service = QueueService()
         # pylint: disable=protected-access
@@ -105,7 +109,7 @@ class TestStorageConfig(unittest.TestCase):
         self.assertEqual(
             kwargs["account_url"], "http://127.0.0.1:10001/devstoreaccount1"
         )
-        self.assertEqual(kwargs["queue_name"], QUEUE_NAME)
+        self.assertEqual(kwargs["queue_name"], "test-queue")
         self.assertIsInstance(kwargs["credential"], str)
         # Check for Azurite default key
         self.assertTrue(kwargs["credential"].startswith("Eby8vdM02xNOcq"))
@@ -116,6 +120,8 @@ class TestStorageConfig(unittest.TestCase):
         """Test that https:// URL uses DefaultAzureCredential."""
         prod_url = "https://mystorage.queue.core.windows.net/"
         os.environ["QUEUE_SERVICE_URL"] = prod_url
+        # Test Default Queue Name
+        # Not setting QUEUE_NAME env var
 
         mock_cred_instance = MagicMock()
         mock_credential.return_value = mock_cred_instance
@@ -126,7 +132,7 @@ class TestStorageConfig(unittest.TestCase):
 
         _, kwargs = mock_queue_client.call_args
         self.assertEqual(kwargs["account_url"], prod_url)
-        self.assertEqual(kwargs["queue_name"], QUEUE_NAME)
+        self.assertEqual(kwargs["queue_name"], "csv-processing")
         # Should use the credential instance from DefaultAzureCredential()
         self.assertIs(kwargs["credential"], mock_cred_instance)
 

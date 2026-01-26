@@ -14,7 +14,11 @@ __all__ = [
     "to_transaction",
     "get_transactions",
     "to_currency",
+    "AZURE_DEV_ACCOUNT_KEY",
 ]
+
+# Azure Storage Device Account Key
+AZURE_DEV_ACCOUNT_KEY = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="
 
 # Supported date formats
 DATE_FORMATS = ["%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d"]
@@ -43,7 +47,7 @@ def to_transaction(  # pylint: disable=too-many-return-statements
     except AttributeError:
         return None, "Unexpected error: row is not a valid dictionary"
 
-    # 1. Date
+    # Date
     if "Date" not in clean_row:
         return None, "Missing 'Date' field"
     try:
@@ -54,12 +58,12 @@ def to_transaction(  # pylint: disable=too-many-return-statements
     if transaction_date is None:
         return None, "Date parse failed unexpectedly"
 
-    # 2. Name
+    # Name
     if "Name" not in clean_row:
         return None, "Missing 'Name' field"
     transaction_name = clean_row["Name"]
 
-    # 3. Account Number
+    # Account Number
     try:
         transaction_account_number = int(clean_row.get("Account Number", ""))
     except ValueError:
@@ -68,21 +72,21 @@ def to_transaction(  # pylint: disable=too-many-return-statements
             f"Invalid or missing 'Account Number': {clean_row.get('Account Number')}",
         )
 
-    # 4. Amount
+    # Amount
     try:
         # Use Decimal for financial calculations
         transaction_amount = Decimal(clean_row.get("Amount", "0"))
     except (ValueError, InvalidOperation):
         return None, f"Invalid or missing 'Amount': {clean_row.get('Amount')}"
 
-    # 5. Category (Optional)
+    # Category (Optional)
     try:
         transaction_category = Category(clean_row.get("Category"))
     except ValueError:
         # Treat unknown categories as OTHER
         transaction_category = Category.OTHER
 
-    # 6. Ignored From (Optional)
+    # Ignored From (Optional)
     try:
         ignored_from_val = clean_row.get("Ignored From", "")
         transaction_ignore = IgnoredFrom(ignored_from_val)

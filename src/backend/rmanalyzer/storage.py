@@ -13,17 +13,15 @@ from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
 from azure.storage.queue import QueueClient
 
+from .utils import AZURE_DEV_ACCOUNT_KEY
+
 __all__ = [
     "BlobService",
+    "BlobService",
     "QueueService",
-    "QUEUE_NAME",
-    "BLOB_CONTAINER_NAME",
 ]
 
 logger = logging.getLogger(__name__)
-
-BLOB_CONTAINER_NAME = "csv-uploads"
-QUEUE_NAME = "csv-processing"
 
 
 class BlobService:
@@ -33,6 +31,8 @@ class BlobService:
         self._blob_service_url = os.environ.get("BLOB_SERVICE_URL")
         if not self._blob_service_url:
             raise ValueError("BLOB_SERVICE_URL environment variable is not set.")
+
+        self._container_name = os.environ.get("BLOB_CONTAINER_NAME", "csv-uploads")
         self._blob_client: BlobServiceClient | None = None
 
     def _get_blob_service_client(self) -> BlobServiceClient:
@@ -45,7 +45,7 @@ class BlobService:
             # Azurite well-known credentials
             self._blob_client = BlobServiceClient(
                 account_url=self._blob_service_url,  # type: ignore
-                credential="Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
+                credential=AZURE_DEV_ACCOUNT_KEY,
             )
         else:
             # Production
@@ -60,7 +60,7 @@ class BlobService:
         Returns the URL of the uploaded blob.
         """
         client = self._get_blob_service_client()
-        container_client = client.get_container_client(BLOB_CONTAINER_NAME)
+        container_client = client.get_container_client(self._container_name)
 
         # Ensure container exists (idempotent usually, or pre-created by terraform)
         if not container_client.exists():
@@ -81,7 +81,7 @@ class BlobService:
         Downloads CSV content from the blob container as a string.
         """
         client = self._get_blob_service_client()
-        container_client = client.get_container_client(BLOB_CONTAINER_NAME)
+        container_client = client.get_container_client(self._container_name)
         blob_client = container_client.get_blob_client(file_name)
 
         download_stream = blob_client.download_blob()
@@ -95,6 +95,8 @@ class QueueService:
         self._queue_service_url = os.environ.get("QUEUE_SERVICE_URL")
         if not self._queue_service_url:
             raise ValueError("QUEUE_SERVICE_URL environment variable is not set.")
+
+        self._queue_name = os.environ.get("QUEUE_NAME", "csv-processing")
         self._queue_client: QueueClient | None = None
 
     def _get_queue_client(self) -> QueueClient:
@@ -107,14 +109,14 @@ class QueueService:
             # Azurite well-known credentials
             self._queue_client = QueueClient(
                 account_url=self._queue_service_url,  # type: ignore
-                queue_name=QUEUE_NAME,
-                credential="Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
+                queue_name=self._queue_name,
+                credential=AZURE_DEV_ACCOUNT_KEY,
             )
         else:
             # Production
             self._queue_client = QueueClient(
                 account_url=self._queue_service_url,  # type: ignore
-                queue_name=QUEUE_NAME,
+                queue_name=self._queue_name,
                 credential=DefaultAzureCredential(),
             )
         return self._queue_client

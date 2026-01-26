@@ -99,12 +99,12 @@ def handle_upload_async(req: func.HttpRequest) -> func.HttpResponse:
         return func.HttpResponse("Unauthorized", status_code=HTTPStatus.UNAUTHORIZED)
 
     try:
-        # 1. Extract File
+        # Extract File
         filename, content, error_resp = _get_uploaded_file_content(req)
         if error_resp:
             return error_resp
 
-        # 2. Upload to Blob Storage
+        # Upload to Blob Storage
         # Generate a unique name to avoid overwrites (though blob_utils handles it, good practice)
         base_name = os.path.basename(filename)
         blob_name = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{base_name}"
@@ -112,7 +112,7 @@ def handle_upload_async(req: func.HttpRequest) -> func.HttpResponse:
         blob_url = blob_service.upload_csv(blob_name, content)
         logging.info("Uploaded blob: %s", blob_url)
 
-        # 3. Enqueue Message
+        # Enqueue Message
         queue_service.enqueue_message({"blob_name": blob_name})
         logging.info("Enqueued processing message for: %s", blob_name)
 
@@ -143,10 +143,10 @@ def process_queue_item(msg: func.QueueMessage) -> None:
             logging.error("Invalid message: missing blob_name")
             return
 
-        # 1. Download CSV
+        # Download CSV
         csv_content = blob_service.download_csv(blob_name)
 
-        # 3. Analysis
+        # Analysis
         transactions, errors = get_transactions(csv_content)
 
         # Retrieve People from DB
@@ -162,13 +162,13 @@ def process_queue_item(msg: func.QueueMessage) -> None:
             email_service.send_error_email(recipients, errors)
             return
 
-        # 4. Save to DB
+        # Save to DB
         try:
             db_service.save_transactions(transactions)
         except Exception as e:  # pylint: disable=broad-exception-caught
             logging.error("Failed to save transactions to DB: %s", e)
 
-        # 5. Email
+        # Email
         # Re-using members fetched above
         group = Group(members)
         group.add_transactions(transactions)
