@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 import os
 from azure.core.credentials import AzureNamedKeyCredential
-from rmanalyzer.db import DatabaseService
+from rmanalyzer.services import DatabaseService
 
 
 class TestDBConfig(unittest.TestCase):
@@ -24,14 +24,14 @@ class TestDBConfig(unittest.TestCase):
         os.environ.clear()
         os.environ.update(self.original_env)
 
-    @patch("rmanalyzer.db.TableClient")
+    @patch("rmanalyzer.services.TableClient")
     def test_init_missing_url(self, _):
         """Test that ValueError is raised during init when TABLE_SERVICE_URL is missing."""
         with self.assertRaises(ValueError) as cm:
             DatabaseService()
         self.assertIn("TABLE_SERVICE_URL", str(cm.exception))
 
-    @patch("rmanalyzer.db.TableClient")
+    @patch("rmanalyzer.services.TableClient")
     def test_get_table_client_dev_url(self, mock_table_client):
         """Test that http:// URL uses Azurite credentials."""
         os.environ["TABLE_SERVICE_URL"] = "http://127.0.0.1:10002/devstoreaccount1"
@@ -45,8 +45,8 @@ class TestDBConfig(unittest.TestCase):
         self.assertEqual(kwargs["endpoint"], "http://127.0.0.1:10002/devstoreaccount1")
         self.assertIsInstance(kwargs["credential"], AzureNamedKeyCredential)
 
-    @patch("rmanalyzer.db.DefaultAzureCredential")
-    @patch("rmanalyzer.db.TableClient")
+    @patch("rmanalyzer.services.DefaultAzureCredential")
+    @patch("rmanalyzer.services.TableClient")
     def test_get_table_client_prod_url(self, mock_table_client, mock_credential):
         """Test that https:// URL uses DefaultAzureCredential."""
         prod_url = "https://mystorage.table.core.windows.net/"
@@ -66,7 +66,7 @@ class TestDBConfig(unittest.TestCase):
         # We patch the class to return our mock
         self.assertIs(kwargs["credential"], mock_cred_instance)
 
-    @patch("rmanalyzer.db.TableClient")
+    @patch("rmanalyzer.services.TableClient")
     def test_get_table_client_cached(self, mock_table_client):
         """Test that TableClient is cached."""
         os.environ["TABLE_SERVICE_URL"] = "http://127.0.0.1:10002/devstoreaccount1"

@@ -4,7 +4,7 @@ from datetime import date
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
-from rmanalyzer.db import DatabaseService
+from rmanalyzer.services import DatabaseService
 from rmanalyzer.models import Category, IgnoredFrom, Transaction
 
 

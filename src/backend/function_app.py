@@ -3,7 +3,7 @@ Azure Function App entry point for RMAnalyzer.
 """
 
 import azure.functions as func
-from rmanalyzer import controllers
+from rmanalyzer import controller
 
 app = func.FunctionApp()
 
@@ -18,7 +18,7 @@ def upload(req: func.HttpRequest) -> func.HttpResponse:
     (Easy Auth) which is configured at the platform level. The application logic verifies the
     'x-ms-client-principal' header to ensure requests are authenticated.
     """
-    return controllers.handle_upload_async(req)
+    return controller.controller.handle_upload_async(req)
 
 
 @app.queue_trigger(
@@ -26,7 +26,7 @@ def upload(req: func.HttpRequest) -> func.HttpResponse:
 )
 def process_upload_queue(msg: func.QueueMessage) -> None:
     """Processes a queued upload message."""
-    controllers.process_queue_item(msg)
+    controller.controller.process_queue_item(msg)
 
 
 @app.route(
@@ -34,4 +34,4 @@ def process_upload_queue(msg: func.QueueMessage) -> None:
 )
 def handle_savings(req: func.HttpRequest) -> func.HttpResponse:
     """Handles getting and updating savings calculation data."""
-    return controllers.handle_savings_dbrequest(req)
+    return controller.controller.handle_savings_dbrequest(req)

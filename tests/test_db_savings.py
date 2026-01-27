@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, call, patch
 import os
-from rmanalyzer.db import DatabaseService
+from rmanalyzer.services import DatabaseService
 
 
 class TestSavingsDB(unittest.TestCase):
@@ -89,6 +89,7 @@ class TestSavingsDB(unittest.TestCase):
         self.mock_client.query_entities.return_value = []
 
         result = self.db_service.get_savings("2026-02", "user")
+        result = self.db_service.get_savings("2026-02", "user")
         self.assertIsNone(result)
 
     def test_save_savings_deletes_existing(self):
@@ -102,6 +103,7 @@ class TestSavingsDB(unittest.TestCase):
             {"PartitionKey": pk, "RowKey": "ITEM_OLD"},
         ]
 
+        self.db_service.save_savings(month, {}, user)
         self.db_service.save_savings(month, {}, user)
 
         batch_args = self.mock_client.submit_transaction.call_args[0][0]

@@ -11,3 +11,7 @@ os.environ.setdefault("SAVINGS_TABLE", "test-savings")
 os.environ.setdefault("PEOPLE_TABLE", "test-people")
 os.environ.setdefault("AzureWebJobsStorage", "UseDevelopmentStorage=true")
 os.environ.setdefault("FUNCTIONS_WORKER_RUNTIME", "python")
+os.environ.setdefault(
+    "COMMUNICATION_SERVICES_ENDPOINT", "https://test.communication.azure.com"
+)
+os.environ.setdefault("SENDER_EMAIL", "test-sender@example.com")

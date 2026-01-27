@@ -9,16 +9,8 @@ from typing import List, Optional, Tuple, Dict
 
 from .models import Category, IgnoredFrom, Transaction
 
-__all__ = [
-    "parse_date",
-    "to_transaction",
-    "get_transactions",
-    "to_currency",
-    "AZURE_DEV_ACCOUNT_KEY",
-]
+__all__ = ["parse_date", "to_transaction", "get_transactions", "to_currency"]
 
-# Azure Storage Device Account Key
-AZURE_DEV_ACCOUNT_KEY = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="  # pylint: disable=line-too-long
 
 # Supported date formats
 DATE_FORMATS = ["%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d"]
