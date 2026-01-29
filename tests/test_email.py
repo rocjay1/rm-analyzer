@@ -53,8 +53,8 @@ class TestEmailer(unittest.TestCase):
         self.assertIn("Transactions Summary", subject)
         self.assertIn("08/01/25", subject)
 
-    @patch("rmanalyzer.services.EmailClient")
-    @patch("rmanalyzer.services.DefaultAzureCredential")
+    @patch("rmanalyzer.services.email_service.EmailClient")
+    @patch("rmanalyzer.services.email_service.DefaultAzureCredential")
     def test_send_email_success(self, _, mock_email_client):
         """Test sending the email with valid configuration."""
         # Set env vars for service

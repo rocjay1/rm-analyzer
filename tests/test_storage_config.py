@@ -33,7 +33,7 @@ class TestStorageConfig(unittest.TestCase):
         os.environ.clear()
         os.environ.update(self.original_env)
 
-    @patch("rmanalyzer.services.BlobServiceClient")
+    @patch("rmanalyzer.services.blob_service.BlobServiceClient")
     def test_init_blob_service_missing_url(self, _):
         """Test that ValueError is raised when BLOB_SERVICE_URL is missing."""
         with self.assertRaises(ValueError) as cm:
@@ -41,7 +41,7 @@ class TestStorageConfig(unittest.TestCase):
             BlobService()
         self.assertIn("BLOB_SERVICE_URL", str(cm.exception))
 
-    @patch("rmanalyzer.services.BlobServiceClient")
+    @patch("rmanalyzer.services.blob_service.BlobServiceClient")
     def test_get_blob_client_dev_url(self, mock_blob_client):
         """Test that http:// URL uses Azurite credentials."""
         os.environ["BLOB_SERVICE_URL"] = "http://127.0.0.1:10000/devstoreaccount1"
@@ -63,8 +63,8 @@ class TestStorageConfig(unittest.TestCase):
         # Check for Azurite default key
         self.assertTrue(kwargs["credential"].startswith("Eby8vdM02xNOcq"))
 
-    @patch("rmanalyzer.services.DefaultAzureCredential")
-    @patch("rmanalyzer.services.BlobServiceClient")
+    @patch("rmanalyzer.services.blob_service.DefaultAzureCredential")
+    @patch("rmanalyzer.services.blob_service.BlobServiceClient")
     def test_get_blob_client_prod_url(self, mock_blob_client, mock_credential):
         """Test that https:// URL uses DefaultAzureCredential."""
         prod_url = "https://mystorage.blob.core.windows.net/"
@@ -84,7 +84,7 @@ class TestStorageConfig(unittest.TestCase):
         # Should use the credential instance from DefaultAzureCredential()
         self.assertIs(kwargs["credential"], mock_cred_instance)
 
-    @patch("rmanalyzer.services.BlobServiceClient")
+    @patch("rmanalyzer.services.blob_service.BlobServiceClient")
     def test_get_blob_client_cached(self, mock_blob_client):
         """Test that BlobServiceClient is cached."""
         os.environ["BLOB_SERVICE_URL"] = "http://127.0.0.1:10000/devstoreaccount1"
@@ -96,7 +96,7 @@ class TestStorageConfig(unittest.TestCase):
         self.assertIs(client1, client2)
         mock_blob_client.assert_called_once()
 
-    @patch("rmanalyzer.services.QueueClient")
+    @patch("rmanalyzer.services.queue_service.QueueClient")
     def test_init_queue_service_missing_url(self, _):
         """Test that ValueError is raised when QUEUE_SERVICE_URL is missing."""
         with self.assertRaises(ValueError) as cm:
@@ -104,7 +104,7 @@ class TestStorageConfig(unittest.TestCase):
             QueueService()
         self.assertIn("QUEUE_SERVICE_URL", str(cm.exception))
 
-    @patch("rmanalyzer.services.QueueClient")
+    @patch("rmanalyzer.services.queue_service.QueueClient")
     def test_get_queue_client_dev_url(self, mock_queue_client):
         """Test that http:// URL uses Azurite credentials."""
         os.environ["QUEUE_SERVICE_URL"] = "http://127.0.0.1:10001/devstoreaccount1"
@@ -129,8 +129,8 @@ class TestStorageConfig(unittest.TestCase):
         # Check for Azurite default key
         self.assertTrue(kwargs["credential"].startswith("Eby8vdM02xNOcq"))
 
-    @patch("rmanalyzer.services.DefaultAzureCredential")
-    @patch("rmanalyzer.services.QueueClient")
+    @patch("rmanalyzer.services.queue_service.DefaultAzureCredential")
+    @patch("rmanalyzer.services.queue_service.QueueClient")
     def test_get_queue_client_prod_url(self, mock_queue_client, mock_credential):
         """Test that https:// URL uses DefaultAzureCredential."""
         prod_url = "https://mystorage.queue.core.windows.net/"
@@ -155,7 +155,7 @@ class TestStorageConfig(unittest.TestCase):
         # Should use the credential instance from DefaultAzureCredential()
         self.assertIs(kwargs["credential"], mock_cred_instance)
 
-    @patch("rmanalyzer.services.QueueClient")
+    @patch("rmanalyzer.services.queue_service.QueueClient")
     def test_get_queue_client_cached(self, mock_queue_client):
         """Test that QueueClient is cached."""
         os.environ["QUEUE_SERVICE_URL"] = "http://127.0.0.1:10001/devstoreaccount1"
