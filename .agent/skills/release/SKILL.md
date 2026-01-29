@@ -39,10 +39,19 @@ description: Create a new release for the current repository in GitHub
      - Fix C
      ```
 
-5. **Create Tag**:
-   - Calculate the new version number `vX.Y.Z+1`.
-   - Run `git tag -a vX.Y.Z+1 -m "Release vX.Y.Z+1"`.
-   - Run `git push origin vX.Y.Z+1`.
+5. **Calculate New Version (Semantic Versioning)**:
+   - Identify the type of changes made:
+     - **MAJOR**: Breaking changes (e.g., incompatible API, significant restructuring).
+     - **MINOR**: New features (backward compatible).
+     - **PATCH**: Bug fixes or minor improvements (backward compatible).
+   - Follow the [SemVer rules](https://aws.amazon.com/blogs/devops/using-semantic-versioning-to-simplify-release-management/) for incrementing:
+     - Increment **Major** (X.0.0) for breaking changes. Reset Minor and Patch to 0.
+     - Increment **Minor** (X.Y.0) for features. Reset Patch to 0.
+     - Increment **Patch** (X.Y.Z) for fixes.
 
-6. **Create GitHub Release**:
-   - Run `gh release create vX.Y.Z+1 --title "vX.Y.Z+1" --notes "<body>"` where `<body>` is the release notes prepared in step 4.
+6. **Create Tag**:
+   - Run `git tag -a vX.Y.Z -m "Release vX.Y.Z"`.
+   - Run `git push origin vX.Y.Z`.
+
+7. **Create GitHub Release**:
+   - Run `gh release create vX.Y.Z --title "vX.Y.Z" --notes "<body>"` where `<body>` is the release notes prepared in step 4.
