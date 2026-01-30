@@ -1,6 +1,7 @@
 """Service for rendering email content."""
 
 from typing import List, Optional
+
 from ..models import Category, Group
 from ..utils import to_currency
 
@@ -91,10 +92,13 @@ class EmailRenderer:
         debt_html = ""
         if len(group.members) == 2:
             p1, p2 = group.members
-            msg = (
-                f"{p1.name} owes {p2.name}: "
-                f"<strong>{to_currency(group.get_debt(p1, p2))}</strong>"
-            )
+            debt_amount = group.get_debt(p1, p2)
+
+            if debt_amount > 0:
+                msg = f"{p1.name} owes {p2.name}: <strong>{to_currency(debt_amount)}</strong>"
+            else:
+                msg = f"{p2.name} owes {p1.name}: <strong>{to_currency(abs(debt_amount))}</strong>"
+
             debt_html = f"""
             <div style="margin-top: 25px; font-size: 16px; background-color: #f0f6ff; padding: 15px; border-radius: 4px; border: 1px solid #c7e0f4; color: #005a9e; text-align: center;">
                 {msg}

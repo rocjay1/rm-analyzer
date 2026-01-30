@@ -86,3 +86,39 @@ class TestEmailer(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             EmailService()
+
+    def test_render_debt_message(self):
+        """Test debt message rendering logic."""
+        # Case 1: p1 owes p2 (Positive debt)
+        # p1 spent 0, p2 spent 10. Total 10. p1 share 5. p1 paid 0. p1 owes 5.
+        t2 = Transaction(
+            date(2025, 8, 1),
+            "B",
+            2,
+            Decimal("10.0"),
+            Category.DINING,
+            IgnoredFrom.NOTHING,
+        )
+        p1 = Person("Alice", "alice@example.com", [1], [])
+        p2 = Person("Bob", "bob@example.com", [2], [t2])
+        group = Group([p1, p2])
+
+        body = EmailRenderer.render_body(group)
+        self.assertIn("Alice owes Bob: <strong>5.00</strong>", body)
+
+        # Case 2: p2 owes p1 (Negative debt)
+        # p1 spent 10, p2 spent 0. Total 10. p1 share 5. p1 paid 10. p1 owes -5.
+        t3 = Transaction(
+            date(2025, 8, 1),
+            "A",
+            1,
+            Decimal("10.0"),
+            Category.DINING,
+            IgnoredFrom.NOTHING,
+        )
+        p1_rich = Person("Alice", "alice@example.com", [1], [t3])
+        p2_poor = Person("Bob", "bob@example.com", [2], [])
+        group2 = Group([p1_rich, p2_poor])
+
+        body2 = EmailRenderer.render_body(group2)
+        self.assertIn("Bob owes Alice: <strong>5.00</strong>", body2)
