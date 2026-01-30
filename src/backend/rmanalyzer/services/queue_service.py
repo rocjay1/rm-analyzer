@@ -5,9 +5,11 @@ import json
 import logging
 import os
 from typing import Any
+
 from azure.core.exceptions import ResourceExistsError
 from azure.identity import DefaultAzureCredential
 from azure.storage.queue import QueueClient
+
 from .constants import AZURE_DEV_ACCOUNT_KEY
 
 logger = logging.getLogger(__name__)

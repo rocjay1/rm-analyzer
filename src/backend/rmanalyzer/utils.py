@@ -5,7 +5,7 @@ Utility functions for parsing and formatting.
 import csv
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
-from typing import List, Optional, Tuple, Dict
+from typing import Dict, List, Optional, Tuple
 
 from .models import Category, IgnoredFrom, Transaction
 
@@ -16,7 +16,7 @@ __all__ = ["parse_date", "to_transaction", "get_transactions", "to_currency"]
 DATE_FORMATS = ["%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d"]
 
 
-def parse_date(date_str: str) -> Optional[date]:
+def parse_date(date_str: str) -> date:
     """Parse a date string using supported formats."""
     for fmt in DATE_FORMATS:
         try:
@@ -46,9 +46,6 @@ def to_transaction(  # pylint: disable=too-many-return-statements
         transaction_date = parse_date(clean_row["Date"])
     except ValueError as e:
         return None, str(e)
-
-    if transaction_date is None:
-        return None, "Date parse failed unexpectedly"
 
     # Name
     if "Name" not in clean_row:

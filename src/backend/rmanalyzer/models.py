@@ -147,7 +147,10 @@ class Group:
     def get_debt(
         self, p1: Person, p2: Person, p1_scale_factor: Decimal = Decimal("0.5")
     ) -> Decimal:
-        """Calculate how much p1 owes p2 based on a scale factor."""
+        """
+        Calculate how much p1 owes p2 based on a scale factor.
+        Returns a positive value if p1 owes p2, and a negative value if p2 owes p1.
+        """
         missing = [p for p in [p1, p2] if p not in self.members]
         if missing:
             raise ValueError("People args missing from group")

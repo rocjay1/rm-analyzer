@@ -2,8 +2,10 @@
 
 import logging
 import os
+
 from azure.communication.email import EmailClient
 from azure.identity import DefaultAzureCredential
+
 from .email_renderer import EmailRenderer
 
 logger = logging.getLogger(__name__)

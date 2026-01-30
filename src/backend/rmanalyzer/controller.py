@@ -24,7 +24,16 @@ MAX_FILE_SIZE = 10 * 1024 * 1024
 
 
 class Controller:
-    """Controller for handling application logic and dependency injection."""
+    """
+    Controller for handling application logic and dependency injection.
+
+    Initialized Services:
+        db_service: Services for database interactions.
+        blob_service: Services for blob storage operations.
+        queue_service: Services for queue operations.
+        email_service: Services for sending emails.
+        email_renderer: Helper for rendering email content.
+    """
 
     def __init__(self) -> None:
         # Instantiate Services
