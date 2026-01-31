@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.env
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+*.tfplan
+
+# Azure Functions
+local.settings.json
+.func/
+
+# Azurite
+.azurite/
+
+# VS Code
+.vscode/
+
+# Mac
+.DS_Store
+
+# Frontend
+
+# Backend
+/src/backend/config.json

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Savings Calculator - RM Analyzer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- Navbar injected by navbar.js -->
+
+    <div class="container">
+        <!-- Header row for title (User info moved to nav) -->
+        <div class="header-row">
+            <h1>Savings Calculator</h1>
+        </div>
+
+        <div class="form-group text-right month-picker-container">
+            <label class="label-bold mr-10">Select Month:</label>
+            <div class="picker-group">
+                <select id="monthSelect" class="select-premium"></select>
+                <select id="yearSelect" class="select-premium"></select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="startingBalance" class="label-bold">Starting Balance ($)</label>
+            <input type="number" id="startingBalance" step="0.01" placeholder="0.00">
+        </div>
+
+        <h3>Monthly Adjustments</h3>
+        <table id="costsTable" class="responsive-table">
+            <thead>
+                <tr>
+                    <th class="col-item">Item</th>
+                    <th class="col-amount">Amount ($)</th>
+                    <th class="col-action">Action</th>
+                </tr>
+            </thead>
+            <tbody id="costsBody">
+                <!-- Rows will be added here -->
+            </tbody>
+        </table>
+
+        <button class="btn btn-secondary" id="addItemBtn">+ Add Item</button>
+
+        <div class="result-box">
+            Savings Transfer: <span id="transferAmount">$0.00</span>
+        </div>
+
+        <div class="actions-row">
+            <span id="status" class="status-msg"></span>
+            <button class="btn" id="saveBtn">Save Changes</button>
+        </div>
+    </div>
+
+    <script type="module" src="savings.js"></script>
+</body>
+
+</html>
