@@ -136,6 +136,33 @@ class Controller:
                 f"Upload Error: {str(e)}", status_code=HTTPStatus.INTERNAL_SERVER_ERROR
             )
 
+    def _send_summary_email(self, group: Group, errors: list[str]) -> None:
+        """Helper to render and send summary email."""
+        if not any(p.transactions for p in group.members):
+            logging.warning("No valid transactions found for configured accounts.")
+            return
+
+        body = self.email_renderer.render_body(group, errors=errors)
+        subject = self.email_renderer.render_subject(group)
+        recipients = [p.email for p in group.members]
+
+        self.email_service.send_email(recipients, subject, body)
+
+    def _process_analysis(
+        self, csv_content: str
+    ) -> tuple[list, list, list[Person]]:
+        """
+        Analyzes the CSV content and returns transactions, errors, and members.
+        """
+        # Analysis
+        transactions, errors = get_transactions(csv_content)
+
+        # Retrieve People from DB
+        people_data = self.db_service.get_all_people()
+        members = [Person.from_config(p) for p in people_data]
+
+        return transactions, errors, members
+
     def process_queue_item(self, msg: func.QueueMessage) -> None:
         """
         Queue Trigger handler. Downloads CSV, analyzes it, saves to DB, and emails summary.
@@ -154,19 +181,12 @@ class Controller:
             # Download CSV
             csv_content = self.blob_service.download_csv(blob_name)
 
-            # Analysis
-            transactions, errors = get_transactions(csv_content)
-
-            # Retrieve People from DB
-            people_data = self.db_service.get_all_people()
-            members = [Person.from_config(p) for p in people_data]
+            transactions, errors, members = self._process_analysis(csv_content)
 
             if errors and len(transactions) == 0:
                 logging.error("CSV Validation Errors: %s", errors)
-
                 # Send Error Email
-                recipients = [p.email for p in members]
-                self.email_service.send_error_email(recipients, errors)
+                self.email_service.send_error_email([p.email for p in members], errors)
                 return
 
             # Save to DB
@@ -178,16 +198,7 @@ class Controller:
             # Email
             group = Group(members)
             group.add_transactions(transactions)
-
-            if not any(p.transactions for p in group.members):
-                logging.warning("No valid transactions found for configured accounts.")
-                return
-
-            body = self.email_renderer.render_body(group, errors=errors)
-            subject = self.email_renderer.render_subject(group)
-            recipients = [p.email for p in group.members]
-
-            self.email_service.send_email(recipients, subject, body)
+            self._send_summary_email(group, errors)
 
             logging.info("Processing complete for %s", blob_name)
 

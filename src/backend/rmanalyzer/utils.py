@@ -35,7 +35,7 @@ def to_transaction(  # pylint: disable=too-many-return-statements
     """
     # Normalize keys and values
     try:
-        clean_row = {k.strip(): v.strip() for k, v in row.items() if k}
+        clean_row = {k.strip(): (v or "").strip() for k, v in row.items() if k}
     except AttributeError:
         return None, "Unexpected error: row is not a valid dictionary"
 
