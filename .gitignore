@@ -31,3 +31,6 @@ local.settings.json
 
 # Backend
 /src/backend/config.json
+
+# Ref
+ref/2026-01-31T15_21_16.602Z-transactions.csv

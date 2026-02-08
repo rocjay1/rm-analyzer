@@ -35,3 +35,28 @@ def process_upload_queue(msg: func.QueueMessage) -> None:
 def handle_savings(req: func.HttpRequest) -> func.HttpResponse:
     """Handles getting and updating savings calculation data."""
     return controller.controller.handle_savings_dbrequest(req)
+
+
+@app.route(route="sync-data", methods=["POST"], auth_level=func.AuthLevel.FUNCTION)
+def sync_data(req: func.HttpRequest) -> func.HttpResponse:
+    """Syncs data from extension."""
+    return controller.controller.handle_sync_data(req)
+
+
+@app.route(
+    route="cards", methods=["GET", "POST", "PUT"], auth_level=func.AuthLevel.ANONYMOUS
+)
+def cards(req: func.HttpRequest) -> func.HttpResponse:
+    """Handles credit card management."""
+    return controller.controller.handle_cards(req)
+
+
+@app.schedule(
+    schedule="0 0 9 * * *",  # Daily at 9 AM
+    arg_name="timer",
+    run_on_startup=False,
+    use_monitor=False,
+)
+def check_reminders(timer: func.TimerRequest) -> None:
+    """Checks for payment due dates and sends reminders."""
+    controller.controller.check_reminders()

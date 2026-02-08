@@ -13,12 +13,81 @@
     <!-- Navbar injected by navbar.js -->
 
     <div class="container">
-        <h1>RM Analyzer</h1>
-        <p>Upload your transaction CSV to run the analysis.</p>
-        <br>
-        <input type="file" id="fileInput" accept=".csv,text/csv,application/vnd.ms-excel,text/plain" />
-        <button id="uploadBtn" class="btn">Upload</button>
-        <div id="status"></div>
+        <h1>RM Analyzer Dashboard</h1>
+        
+        <!-- Credit Card Dashboard -->
+        <section id="card-dashboard" class="dashboard-section">
+            <div class="section-header">
+                <h2>Credit Cards</h2>
+                <div class="actions">
+                    <button id="updateStatementsBtn" class="btn secondary">Update Statements</button>
+                    <button id="addCardBtn" class="btn secondary">Manage Cards</button>
+                </div>
+            </div>
+            <div id="cards-container" class="cards-grid">
+                <!-- Cards injected here -->
+                <div class="loading">Loading cards...</div>
+            </div>
+        </section>
+
+        <!-- Upload Section -->
+        <section id="upload-section" class="dashboard-section">
+            <h2>Upload Transactions</h2>
+            <div class="upload-controls">
+                <input type="file" id="fileInput" accept=".csv,text/csv,application/vnd.ms-excel,text/plain" />
+                <button id="uploadBtn" class="btn primary">Upload CSV</button>
+            </div>
+            <div id="status" class="status-message"></div>
+        </section>
+    </div>
+
+    <!-- Modals -->
+    <div id="cardModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modalTitle">Configure Credit Card</h2>
+            <form id="cardForm">
+                <input type="hidden" id="cardId">
+                <div class="form-group">
+                    <label for="cardName">Card Name</label>
+                    <input type="text" id="cardName" required>
+                </div>
+                <div class="form-group">
+                    <label for="accountNumber">Account Number (Last 4)</label>
+                    <input type="number" id="accountNumber" required>
+                </div>
+                <div class="form-group">
+                    <label for="creditLimit">Credit Limit</label>
+                    <input type="number" id="creditLimit" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="dueDay">Due Day (1-31)</label>
+                    <input type="number" id="dueDay" min="1" max="31" required>
+                </div>
+                <div class="form-group">
+                    <label for="currentBalance">Current Balance</label>
+                    <input type="number" id="currentBalance" step="0.01" required>
+                </div>
+                 <div class="form-group">
+                    <label for="statementBalance">Statement Balance</label>
+                    <input type="number" id="statementBalance" step="0.01" required>
+                </div>
+                <button type="submit" class="btn primary">Save Card</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="statementModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Update Statement Balances</h2>
+            <form id="statementForm">
+                <div id="statementFields">
+                    <!-- Dynamic fields injected here -->
+                </div>
+                <button type="submit" class="btn primary">Update All</button>
+            </form>
+        </div>
     </div>
 
     <script type="module" src="app.js"></script>

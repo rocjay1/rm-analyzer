@@ -7,13 +7,15 @@ import logging
 import os
 import uuid
 from datetime import datetime
+from decimal import Decimal
+
 from typing import Any
 
 from azure.core.credentials import AzureNamedKeyCredential
 from azure.data.tables import TableClient, TableTransactionError, UpdateMode
 from azure.identity import DefaultAzureCredential
 
-from ..models import Transaction
+from ..models import Transaction, Account, CreditCard
 from .constants import AZURE_DEV_ACCOUNT_KEY
 
 logger = logging.getLogger(__name__)
@@ -32,6 +34,8 @@ class DatabaseService:
         self._transactions_table = os.environ.get("TRANSACTIONS_TABLE", "transactions")
         self._savings_table = os.environ.get("SAVINGS_TABLE", "savings")
         self._people_table = os.environ.get("PEOPLE_TABLE", "people")
+        self._accounts_table = os.environ.get("ACCOUNTS_TABLE", "accounts")
+        self._credit_cards_table = os.environ.get("CREDIT_CARDS_TABLE", "creditcards")
 
     def _get_table_client(self, table_name: str) -> TableClient:
         """Returns a TableClient, ensuring the table exists. Cached per instance."""
@@ -78,57 +82,79 @@ class DatabaseService:
         )
         return hashlib.sha256(unique_string.encode("utf-8")).hexdigest()
 
-    def save_transactions(self, transactions: list[Transaction]) -> None:
+    def save_transactions(self, transactions: list[Transaction]) -> list[Transaction]:
         """
         Saves a list of transactions to Azure Table Storage using batched upserts.
-        Groups by PartitionKey (Tenant_Month) first, then chunks into batches of 100.
+        Groups by PartitionKey (Tenant_Month) first.
+        Returns a list of transactions that were ACTUALLY new (not previously in DB).
         """
         if not transactions:
-            return
+            return []
 
         client = self._get_table_client(self._transactions_table)
         timestamp = datetime.now().isoformat()
+        new_transactions = []
 
-        # Group by PartitionKey (Tenant_Month) to satisfy batch requirements
+        # Group by PartitionKey (Tenant_Month)
         partitions = collections.defaultdict(list)
         for t in transactions:
-            # Partition Strategy: Tenant_Month
             pk = f"default_{t.date.strftime('%Y-%m')}"
             partitions[pk].append(t)
 
-        # Process each partition group
+        # Process each partition
         for pk, trans_list in partitions.items():
-            # Track occurrences of identical transactions within this partition
-            # to ensure unique (but deterministic) RowKeys for duplicates in the same file.
+            # 1. Calculate RowKeys for all potential transactions
             occurrences: dict[Any, int] = collections.defaultdict(int)
+            trans_with_keys = []
 
-            # Chunk into batches of 100
-            for i in range(0, len(trans_list), 100):
-                chunk = trans_list[i : i + 100]
-                batch = []
+            for t in trans_list:
+                txn_signature = (t.date, t.name, t.amount, t.account_number)
+                occurrences[txn_signature] += 1
+                idx = occurrences[txn_signature] - 1
+                row_key = self._generate_row_key(t, idx)
+                trans_with_keys.append((t, row_key))
 
-                for t in chunk:
-                    # Calculate occurrence index for this specific transaction signature
-                    txn_signature = (t.date, t.name, t.amount, t.account_number)
-                    occurrences[txn_signature] += 1
-                    idx = occurrences[txn_signature] - 1
+            # 2. Check for existing RowKeys in this partition
+            # Querying all RowKeys in partition is safer for bulk checks.
+            try:
+                # Select only RowKey to minimize payload
+                existing_entities = client.query_entities(
+                    query_filter=f"PartitionKey eq '{pk}'", select=["RowKey"]
+                )
+                existing_keys = {e["RowKey"] for e in existing_entities}
+            except Exception as e:
+                logger.warning(
+                    "Failed to query existing transactions for partition %s: %s", pk, e
+                )
+                existing_keys = set()
 
-                    # Add to batch as an "upsert" operation (REPLACE mode)
+            # 3. Filter New vs Existing
+            batch = []
+            for t, rk in trans_with_keys:
+                if rk not in existing_keys:
+                    new_transactions.append(t)
+                    # Add to batch
                     batch.append(
                         (
                             "upsert",
-                            self._create_transaction_entity(
-                                t, pk, self._generate_row_key(t, idx), timestamp
-                            ),
+                            self._create_transaction_entity(t, pk, rk, timestamp),
                             {"mode": UpdateMode.REPLACE},
                         )
                     )
 
-                try:
-                    if batch:
-                        client.submit_transaction(batch)
-                except TableTransactionError as e:
-                    logger.error("Failed to submit batch for partition %s: %s", pk, e)
+            # 4. Submit Batch(es)
+            if batch:
+                # Chunk into 100s
+                for i in range(0, len(batch), 100):
+                    sub_batch = batch[i : i + 100]
+                    try:
+                        client.submit_transaction(sub_batch)
+                    except TableTransactionError as e:
+                        logger.error(
+                            "Failed to submit batch for partition %s: %s", pk, e
+                        )
+
+        return new_transactions
 
     def _create_transaction_entity(
         self, t: Transaction, partition_key: str, row_key: str, timestamp: str
@@ -319,3 +345,147 @@ class DatabaseService:
             return []
 
         return people
+
+    def upsert_accounts(self, accounts: list[Account], user_email: str) -> None:
+        """Upserts a list of accounts for a specific user."""
+        if not accounts:
+            return
+
+        client = self._get_table_client(self._accounts_table)
+
+        batch = []
+        for account in accounts:
+            batch.append(
+                (
+                    "upsert",
+                    self._create_account_entity(account, user_email),
+                    {"mode": UpdateMode.REPLACE},
+                )
+            )
+
+        # Chunk into 100
+        for i in range(0, len(batch), 100):
+            try:
+                client.submit_transaction(batch[i : i + 100])
+            except TableTransactionError as e:
+                logger.error("Failed to upsert accounts batch: %s", e)
+                raise e
+
+    def _create_account_entity(
+        self, account: Account, partition_key: str
+    ) -> dict[str, Any]:
+        """Helper to create an account entity dict."""
+        return {
+            "PartitionKey": partition_key,
+            "RowKey": account.id,
+            "Name": account.name,
+            "Mask": account.mask,
+            "Institution": account.institution,
+            "CurrentBalance": float(account.current_balance),
+            "CreditLimit": float(account.credit_limit),
+            "Type": account.type,
+            "UpdatedAt": datetime.now().isoformat(),
+        }
+
+    def get_credit_cards(self) -> list[CreditCard]:
+        """Retrieves all configured credit cards."""
+        client = self._get_table_client(self._credit_cards_table)
+        cards = []
+
+        try:
+            entities = client.query_entities(
+                query_filter="PartitionKey eq 'CREDIT_CARDS'"
+            )
+            for entity in entities:
+                cards.append(
+                    CreditCard(
+                        id=entity["RowKey"],
+                        name=entity.get("Name", "Unknown Card"),
+                        account_number=int(entity.get("AccountNumber", 0)),
+                        credit_limit=Decimal(str(entity.get("CreditLimit", 0))),
+                        due_day=int(entity.get("DueDay", 1)),
+                        statement_balance=Decimal(
+                            str(entity.get("StatementBalance", 0))
+                        ),
+                        current_balance=Decimal(str(entity.get("CurrentBalance", 0))),
+                    )
+                )
+        except Exception as e:
+            logger.error("Failed to retrieve credit cards: %s", e)
+            return []
+
+        return cards
+
+    def save_credit_card(self, card: CreditCard) -> None:
+        """Upserts a credit card configuration."""
+        client = self._get_table_client(self._credit_cards_table)
+        entity = {
+            "PartitionKey": "CREDIT_CARDS",
+            "RowKey": card.id,
+            "Name": card.name,
+            "AccountNumber": int(card.account_number),
+            "CreditLimit": float(card.credit_limit),
+            "DueDay": int(card.due_day),
+            "StatementBalance": float(card.statement_balance),
+            "CurrentBalance": float(card.current_balance),
+        }
+        try:
+            client.upsert_entity(entity, mode=UpdateMode.REPLACE)
+        except Exception as e:
+            logger.error("Failed to save credit card %s: %s", card.name, e)
+            raise e
+
+    def update_card_balance(self, account_number: int, delta: Decimal) -> None:
+        """
+        Atomically updates a card's current balance.
+        Finds card by AccountNumber (inefficient scan if RowKey != AccountNumber,
+        but we'll assume RowKey IS AccountNumber or we query first).
+        Actually, we should make RowKey = AccountNumberStr for easy lookup.
+        """
+        client = self._get_table_client(self._credit_cards_table)
+        row_key = str(account_number)
+
+        try:
+            entity = client.get_entity(partition_key="CREDIT_CARDS", row_key=row_key)
+            current_bal = Decimal(str(entity.get("CurrentBalance", 0)))
+            new_bal = current_bal + delta
+
+            # Update
+            entity["CurrentBalance"] = float(new_bal)
+            client.update_entity(entity, mode=UpdateMode.REPLACE)
+            logger.info(
+                "Updated balance for card %s: %s -> %s", row_key, current_bal, new_bal
+            )
+        except Exception as e:
+            # Try to find by AccountNumber if RowKey mismatch (less efficient)
+            try:
+                entities = list(
+                    client.query_entities(
+                        query_filter=f"PartitionKey eq 'CREDIT_CARDS' and AccountNumber eq {account_number}"
+                    )
+                )
+                if entities:
+                    entity = entities[0]
+                    current_bal = Decimal(str(entity.get("CurrentBalance", 0)))
+                    new_bal = current_bal + delta
+                    entity["CurrentBalance"] = float(new_bal)
+                    client.update_entity(entity, mode=UpdateMode.REPLACE)
+                    logger.info(
+                        "Updated balance for card (query) %s: %s -> %s",
+                        account_number,
+                        current_bal,
+                        new_bal,
+                    )
+                    return
+                # If still not found
+                logger.error(
+                    "Failed to update balance for card %s: %s. Card might not exist.",
+                    row_key,
+                    e,
+                )
+            except Exception as e2:
+                logger.error(
+                    "Failed to update balance (fallback) for card %s: %s.",
+                    account_number,
+                    e2,
+                )

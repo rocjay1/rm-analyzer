@@ -14,6 +14,8 @@ __all__ = [
     "Transaction",
     "Person",
     "Group",
+    "Account",
+    "CreditCard",
 ]
 
 
@@ -155,3 +157,48 @@ class Group:
         if missing:
             raise ValueError("People args missing from group")
         return p1_scale_factor * self.get_expenses() - p1.get_expenses()
+
+
+@dataclass(frozen=True)
+class Account:
+    """A financial account synced from external sources."""
+
+    id: str
+    name: str
+    mask: str
+    institution: str
+    current_balance: Decimal
+    credit_limit: Decimal
+    type: str
+
+
+@dataclass
+class CreditCard:
+    """A managed credit card with tracking for utilization."""
+
+    id: str  # RowKey (e.g., account number last 4 or uuid)
+    name: str
+    account_number: int  # Last 4 digits
+    credit_limit: Decimal
+    due_day: int  # Day of month (1-31)
+    statement_balance: Decimal
+    current_balance: Decimal
+    last_reconciled: date | None = None
+
+    @property
+    def utilization(self) -> Decimal:
+        """Calculates current utilization ratio."""
+        if self.credit_limit == 0:
+            return Decimal("0.0")
+        return self.current_balance / self.credit_limit
+
+    @property
+    def target_payment(self) -> Decimal:
+        """
+        Calculates amount to pay to reach 10% utilization.
+        Target Balance = Limit * 0.1
+        current - statement - payment = limit * 0.1
+        payment = current - statement - limit * 0.1
+        """
+        target_balance = self.credit_limit * Decimal("0.1")
+        return (self.current_balance - self.statement_balance) - target_balance
