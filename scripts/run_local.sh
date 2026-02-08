@@ -40,7 +40,7 @@ trap cleanup EXIT
 
 echo "Starting Azurite..."
 # Start Azurite in background with specific ports
-azurite --silent --location .azurite --debug .azurite/debug.log &
+azurite --silent --location .azurite --debug .azurite/debug.log --skipApiVersionCheck &
 
 echo "Starting Azure Functions Backend..."
 cd src/backend

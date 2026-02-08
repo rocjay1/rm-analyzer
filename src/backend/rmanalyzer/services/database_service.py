@@ -6,7 +6,7 @@ import json
 import logging
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, date
 from decimal import Decimal
 
 from typing import Any
@@ -397,6 +397,8 @@ class DatabaseService:
                 query_filter="PartitionKey eq 'CREDIT_CARDS'"
             )
             for entity in entities:
+                last_rec_str = entity.get("LastReconciled")
+                last_rec = date.fromisoformat(last_rec_str) if last_rec_str else None
                 cards.append(
                     CreditCard(
                         id=entity["RowKey"],
@@ -408,6 +410,7 @@ class DatabaseService:
                             str(entity.get("StatementBalance", 0))
                         ),
                         current_balance=Decimal(str(entity.get("CurrentBalance", 0))),
+                        last_reconciled=last_rec,
                     )
                 )
         except Exception as e:
@@ -429,6 +432,8 @@ class DatabaseService:
             "StatementBalance": float(card.statement_balance),
             "CurrentBalance": float(card.current_balance),
         }
+        if card.last_reconciled:
+            entity["LastReconciled"] = card.last_reconciled.isoformat()
         try:
             client.upsert_entity(entity, mode=UpdateMode.REPLACE)
         except Exception as e:

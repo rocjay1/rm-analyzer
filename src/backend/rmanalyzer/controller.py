@@ -336,6 +336,9 @@ class Controller:
                         "current_balance": float(c.current_balance),
                         "utilization": float(c.utilization),
                         "target_payment": float(c.target_payment),
+                        "last_reconciled": (
+                            c.last_reconciled.isoformat() if c.last_reconciled else None
+                        ),
                     }
                     for c in cards
                 ]
