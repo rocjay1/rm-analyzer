@@ -45,13 +45,13 @@ azurite --silent --location .azurite --debug .azurite/debug.log --skipApiVersion
 
 echo "Starting Azure Functions Backend..."
 echo "Building Go backend..."
-cd src-go
+cd src/backend-go
 
 # Use local paths for Go build to avoid permission issues
-mkdir -p ../.gotmp/cache
-export GOTMPDIR=$(pwd)/../.gotmp
-export GOCACHE=$(pwd)/../.gotmp/cache
-export GOPATH=$(pwd)/../.gotmp
+mkdir -p ../../.gotmp/cache
+export GOTMPDIR=$(pwd)/../../.gotmp
+export GOCACHE=$(pwd)/../../.gotmp/cache
+export GOPATH=$(pwd)/../../.gotmp
 
 go build -o handler cmd/handler/main.go
 if [ $? -ne 0 ]; then
@@ -79,7 +79,7 @@ FUNC_PID=$!
 sleep 5
 
 echo "Starting Frontend Proxy..."
-cd ../src/frontend
+cd ../frontend
 # Unset potentially conflicting variables from the current environment
 unset AZURE_CLIENT_ID
 unset AZURE_CLIENT_SECRET

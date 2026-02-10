@@ -34,7 +34,6 @@ local.settings.json
 
 # Ref
 ref/2026-01-31T15_21_16.602Z-transactions.csv
-node_modules
 
 # Go 
 .go/

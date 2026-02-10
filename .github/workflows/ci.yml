@@ -18,14 +18,14 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: '1.25'
-        cache-dependency-path: src-go/go.sum
+        cache-dependency-path: src/backend-go/go.sum
 
     - name: Test
-      working-directory: src-go
+      working-directory: src/backend-go
       run: |
         go test -v ./...
 
     - name: Build
-      working-directory: src-go
+      working-directory: src/backend-go
       run: |
         go build -v -o handler cmd/handler/main.go

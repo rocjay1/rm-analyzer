@@ -54,16 +54,16 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.25'
-          cache-dependency-path: src-go/go.sum
+          cache-dependency-path: src/backend-go/go.sum
 
       - name: Build Go Backend
         run: |
-          cd src-go
+          cd src/backend-go
           go build -o handler cmd/handler/main.go
-          mkdir -p ../publish
-          cp handler ../publish/
-          cp host.json ../publish/
-          cp -r HttpTrigger ../publish/
+          mkdir -p ../../publish
+          cp handler ../../publish/
+          cp host.json ../../publish/
+          cp -r HttpTrigger ../../publish/
 
       - name: Log in to Azure (OIDC)
         uses: azure/login@v2

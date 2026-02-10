@@ -223,7 +223,7 @@ async function handleSave() {
     };
 
     try {
-        const response = await fetch('/api/savings', {
+        const response = await fetch(`/api/savings?month=${state.month}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
