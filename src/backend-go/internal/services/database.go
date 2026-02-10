@@ -27,7 +27,6 @@ type DatabaseService struct {
 	savingsTable      string
 	creditCardsTable  string
 	transactionsTable string
-	peopleTable       string
 	accountsTable     string
 	credential        azcore.TokenCredential
 }
@@ -52,11 +51,6 @@ func NewDatabaseService() (*DatabaseService, error) {
 	transactionsTable := os.Getenv("TRANSACTIONS_TABLE")
 	if transactionsTable == "" {
 		transactionsTable = "transactions"
-	}
-
-	peopleTable := os.Getenv("PEOPLE_TABLE")
-	if peopleTable == "" {
-		peopleTable = "people"
 	}
 
 	accountsTable := os.Getenv("ACCOUNTS_TABLE")
@@ -85,7 +79,6 @@ func NewDatabaseService() (*DatabaseService, error) {
 		savingsTable:      savingsTable,
 		creditCardsTable:  creditCardsTable,
 		transactionsTable: transactionsTable,
-		peopleTable:       peopleTable,
 		accountsTable:     accountsTable,
 		credential:        cred,
 	}
@@ -100,7 +93,6 @@ func NewDatabaseService() (*DatabaseService, error) {
 		"savings_table", savingsTable,
 		"credit_cards_table", creditCardsTable,
 		"transactions_table", transactionsTable,
-		"people_table", peopleTable,
 		"accounts_table", accountsTable,
 	)
 	return svc, nil
@@ -112,7 +104,6 @@ func (s *DatabaseService) CreateTables(ctx context.Context) error {
 		s.savingsTable,
 		s.creditCardsTable,
 		s.transactionsTable,
-		s.peopleTable,
 		s.accountsTable,
 	}
 
@@ -402,57 +393,6 @@ func (s *DatabaseService) GetCreditCards(ctx context.Context) ([]models.CreditCa
 	}
 
 	return cards, nil
-}
-
-// GetAllPeople retrieves all people from the database.
-func (s *DatabaseService) GetAllPeople(ctx context.Context) ([]models.Person, error) {
-	client, err := s.getClient(s.peopleTable)
-	if err != nil {
-		return nil, err
-	}
-
-	filter := "PartitionKey eq 'PEOPLE'"
-	pager := client.NewListEntitiesPager(&aztables.ListEntitiesOptions{
-		Filter: &filter,
-	})
-
-	var people []models.Person
-
-	for pager.More() {
-		resp, err := pager.NextPage(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to list people: %w", err)
-		}
-
-		for _, entity := range resp.Entities {
-			var parsed map[string]any
-			if err := json.Unmarshal(entity, &parsed); err != nil {
-				continue
-			}
-
-			name, _ := parsed["Name"].(string)
-			email, _ := parsed["Email"].(string)
-			if email == "" {
-				// Fallback to RowKey if Email field empty (schema variation?)
-				email, _ = parsed["RowKey"].(string)
-			}
-
-			var accounts []int
-			accountsJson, _ := parsed["Accounts"].(string)
-			if accountsJson != "" {
-				_ = json.Unmarshal([]byte(accountsJson), &accounts)
-			}
-
-			people = append(people, models.Person{
-				Name:           name,
-				Email:          email,
-				AccountNumbers: accounts,
-				Transactions:   []models.Transaction{}, // Initialize empty
-			})
-		}
-	}
-
-	return people, nil
 }
 
 // GenerateRowKey generates a deterministic unique key for a transaction.

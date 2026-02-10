@@ -30,6 +30,12 @@ jobs:
             exit 1
           fi
       
+      - name: Build Frontend
+        run: |
+          cd src/frontend
+          npm ci
+          npm run build
+
       - name: Deploy to Azure Static Web App
         uses: Azure/static-web-apps-deploy@v1
         with:
@@ -37,10 +43,8 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
           app_location: "src/frontend"
-          output_location: "." # No build step for vanilla JS/HTML
-          # api_location is optional/not needed if managed separately or if using BYO functions, 
-          # but here we are deploying backend separately to a Flex Consumption plan.
-          skip_app_build: true
+          output_location: "dist"
+          skip_app_build: false
 
   deploy-backend:
     runs-on: ubuntu-latest

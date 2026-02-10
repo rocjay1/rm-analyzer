@@ -33,13 +33,6 @@ func TestProcessQueue_Success(t *testing.T) {
 		return blobContent, nil
 	}
 
-	// Mock Database GetAllPeople
-	mockDb.GetAllPeopleFunc = func(ctx context.Context) ([]models.Person, error) {
-		return []models.Person{
-			{Name: "Test User", Email: "test@example.com", AccountNumbers: []int{12345}},
-		}, nil
-	}
-
 	// Mock Database SaveTransactions
 	mockDb.SaveTransactionsFunc = func(ctx context.Context, transactions []models.Transaction) ([]models.Transaction, error) {
 		assert.Len(t, transactions, 1)
@@ -57,14 +50,6 @@ func TestProcessQueue_Success(t *testing.T) {
 	mockDb.UpdateCardBalanceFunc = func(ctx context.Context, accountNumber int, delta decimal.Decimal) error {
 		assert.Equal(t, 12345, accountNumber)
 		assert.True(t, delta.Equal(decimal.NewFromFloat(100.50)))
-		return nil
-	}
-
-	// Mock Email SendSummaryEmail
-	mockEmail.SendSummaryEmailFunc = func(ctx context.Context, recipients []string, group *models.Group, errors []string) error {
-		assert.Contains(t, recipients, "test@example.com")
-		assert.Len(t, group.Members, 1)
-		assert.Len(t, group.Members[0].Transactions, 1)
 		return nil
 	}
 
@@ -127,17 +112,6 @@ func TestProcessQueue_ValidationError(t *testing.T) {
 		return "Invalid CSV Content", nil
 	}
 
-	mockDb.GetAllPeopleFunc = func(ctx context.Context) ([]models.Person, error) {
-		return []models.Person{
-			{Name: "Test User", Email: "test@example.com"},
-		}, nil
-	}
-
-	mockEmail.SendErrorEmailFunc = func(ctx context.Context, recipients []string, errors []string) error {
-		assert.NotEmpty(t, errors)
-		return nil
-	}
-
 	reqPayload := map[string]any{
 		"Data": map[string]any{
 			"queueItem": `{"blob_name": "test-blob.csv"}`,
@@ -179,34 +153,4 @@ func TestProcessQueue_MissingBlobName(t *testing.T) {
 	deps.ProcessQueue(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
-}
-
-func TestProcessQueue_GetPeopleError(t *testing.T) {
-	mockDb := &MockDatabaseClient{}
-	mockBlob := &MockBlobClient{}
-	deps := &Dependencies{
-		Database: mockDb,
-		Blob:     mockBlob,
-	}
-
-	mockBlob.DownloadTextFunc = func(ctx context.Context, containerName, blobName string) (string, error) {
-		return "Date,Description,Amount,AccountNumber\n2023-01-01,Test,100.50,12345", nil
-	}
-
-	mockDb.GetAllPeopleFunc = func(ctx context.Context) ([]models.Person, error) {
-		return nil, errors.New("people db error")
-	}
-
-	reqPayload := map[string]any{
-		"Data": map[string]any{
-			"queueItem": `{"blob_name": "test-blob.csv"}`,
-		},
-	}
-	body, _ := json.Marshal(reqPayload)
-	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer(body))
-	w := httptest.NewRecorder()
-
-	deps.ProcessQueue(w, req)
-
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }

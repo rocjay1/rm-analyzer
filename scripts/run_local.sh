@@ -78,7 +78,15 @@ FUNC_PID=$!
 # Wait for Func to start (simple sleep for now, could be more robust)
 sleep 5
 
-echo "Starting Frontend Proxy..."
+# Parse arguments
+DEV_MODE=false
+for arg in "$@"; do
+    if [ "$arg" == "--dev" ]; then
+        DEV_MODE=true
+    fi
+done
+
+echo "Starting Frontend..."
 cd ../frontend
 # Unset potentially conflicting variables from the current environment
 unset AZURE_CLIENT_ID
@@ -99,7 +107,27 @@ echo "AZURE_CLIENT_ID=$(echo $AZURE_CLIENT_ID | cut -c1-5)****************"
 echo "AZURE_TENANT_ID=$(echo $AZURE_TENANT_ID | cut -c1-5)****************"
 echo "API Route: http://localhost:7071"
 
-# Serve static content from current dir (.), proxy API calls to func running on 7071
-swa start . --api-location http://localhost:7071
+if [ "$DEV_MODE" = true ]; then
+    echo "Starting in DEV mode (Vite HMR + SWA Proxy)..."
+    # Start Vite dev server in background
+    npm run dev &
+    VITE_PID=$!
+    
+    # Wait for Vite to be ready (naive sleep, better to check port)
+    sleep 3
+    
+    # Proxy SWA to Vite dev server
+    swa start http://localhost:5173 --api-location http://localhost:7071
+else
+    echo "Starting in PROD mode (Build + SWA)..."
+    echo "Building frontend..."
+    npm run build
+    if [ $? -ne 0 ]; then
+        echo "Frontend build failed."
+        exit 1
+    fi
+    # Serve built assets
+    swa start dist --api-location http://localhost:7071
+fi
 
 # Wait for func to exit (if swa exits, trap will kill func)

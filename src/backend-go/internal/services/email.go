@@ -14,7 +14,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/rocjay1/rm-analyzer/internal/models"
 )
 
 // EmailService handles sending emails via Azure Communication Services REST API.
@@ -134,18 +133,5 @@ func (s *EmailService) SendEmail(ctx context.Context, to []string, subject, body
 func (s *EmailService) SendErrorEmail(ctx context.Context, recipients []string, errors []string) error {
 	subject := "RMAnalyzer - Upload Failed"
 	body := RenderErrorBody(errors)
-	return s.SendEmail(ctx, recipients, subject, body)
-}
-
-// SendSummaryEmail sends the transaction summary email.
-func (s *EmailService) SendSummaryEmail(ctx context.Context, recipients []string, group *models.Group, errors []string) error {
-	subject, err := RenderSubject(group)
-	if err != nil {
-		return fmt.Errorf("failed to render subject: %w", err)
-	}
-	body, err := RenderBody(group, errors)
-	if err != nil {
-		return fmt.Errorf("failed to render body: %w", err)
-	}
 	return s.SendEmail(ctx, recipients, subject, body)
 }

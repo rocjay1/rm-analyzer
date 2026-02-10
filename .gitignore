@@ -39,4 +39,8 @@ ref/2026-01-31T15_21_16.602Z-transactions.csv
 .go/
 go-build-tmp/
 .gotmp/
-src-go/handler
+src/backend-go/handler
+src/frontend/dist/
+
+# Node.js
+node_modules/

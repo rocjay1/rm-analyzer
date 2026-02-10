@@ -28,4 +28,16 @@ jobs:
     - name: Build
       working-directory: src/backend-go
       run: |
-        go build -v -o handler cmd/handler/main.go
+         go build -v -o handler cmd/handler/main.go
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Build Frontend
+      working-directory: src/frontend
+      run: |
+        npm ci
+        npm run build

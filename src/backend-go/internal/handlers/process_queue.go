@@ -76,23 +76,8 @@ func (d *Dependencies) ProcessQueue(w http.ResponseWriter, r *http.Request) {
 	transactions, errors := utils.ParseCSV(csvContent)
 	slog.Info("parsed CSV content", "blob_name", blobName, "transactions_count", len(transactions), "errors_count", len(errors))
 
-	people, err := d.Database.GetAllPeople(r.Context())
-	if err != nil {
-		slog.Error("failed to get people from database", "error", err)
-		WriteError(w, http.StatusInternalServerError, "Failed to get people")
-		return
-	}
-
-	group := &models.Group{
-		Members: people,
-	}
-
 	if len(errors) > 0 && len(transactions) == 0 {
 		slog.Warn("CSV validation failed with no valid transactions", "blob_name", blobName, "errors_count", len(errors))
-		recipients := group.GetEmails()
-		if err := d.Email.SendErrorEmail(r.Context(), recipients, errors); err != nil {
-			slog.Error("failed to send error email", "recipients", recipients, "error", err)
-		}
 		// Consume the message so it doesn't retry forever.
 		w.WriteHeader(http.StatusOK)
 		return
@@ -148,30 +133,8 @@ func (d *Dependencies) ProcessQueue(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Use all parsed transactions (not just new ones) for the summary email,
-	// matching the Python controller behavior.
-	group.AddTransactions(transactions)
-
-	hasTx := false
-	for _, m := range group.Members {
-		if len(m.Transactions) > 0 {
-			hasTx = true
-			break
-		}
-	}
-
-	if !hasTx {
-		slog.Info("no valid transactions found for configured accounts", "blob_name", blobName)
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	recipients := group.GetEmails()
-	if err := d.Email.SendSummaryEmail(r.Context(), recipients, group, errors); err != nil {
-		slog.Error("failed to send summary email", "recipients", recipients, "error", err)
-		WriteError(w, http.StatusInternalServerError, "Failed to send summary email")
-		return
-	}
+	slog.Info("queue processing complete", "blob_name", blobName, "new_transactions_count", len(newTransactions))
+	w.WriteHeader(http.StatusOK)
 
 	slog.Info("queue processing complete", "blob_name", blobName, "new_transactions_count", len(newTransactions))
 	w.WriteHeader(http.StatusOK)

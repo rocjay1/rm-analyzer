@@ -14,7 +14,6 @@ type MockDatabaseClient struct {
 	GetCreditCardsFunc    func(ctx context.Context) ([]models.CreditCard, error)
 	SaveCreditCardFunc    func(ctx context.Context, card models.CreditCard) error
 	UpdateCardBalanceFunc func(ctx context.Context, accountNumber int, delta decimal.Decimal) error
-	GetAllPeopleFunc      func(ctx context.Context) ([]models.Person, error)
 	SaveTransactionsFunc  func(ctx context.Context, transactions []models.Transaction) ([]models.Transaction, error)
 }
 
@@ -51,13 +50,6 @@ func (m *MockDatabaseClient) UpdateCardBalance(ctx context.Context, accountNumbe
 		return m.UpdateCardBalanceFunc(ctx, accountNumber, delta)
 	}
 	return nil
-}
-
-func (m *MockDatabaseClient) GetAllPeople(ctx context.Context) ([]models.Person, error) {
-	if m.GetAllPeopleFunc != nil {
-		return m.GetAllPeopleFunc(ctx)
-	}
-	return nil, nil
 }
 
 func (m *MockDatabaseClient) SaveTransactions(ctx context.Context, transactions []models.Transaction) ([]models.Transaction, error) {
@@ -101,20 +93,4 @@ func (m *MockQueueClient) EnqueueMessage(ctx context.Context, queueName string, 
 
 // MockEmailClient is a mock implementation of EmailClient
 type MockEmailClient struct {
-	SendErrorEmailFunc   func(ctx context.Context, recipients []string, errors []string) error
-	SendSummaryEmailFunc func(ctx context.Context, recipients []string, group *models.Group, errors []string) error
-}
-
-func (m *MockEmailClient) SendErrorEmail(ctx context.Context, recipients []string, errors []string) error {
-	if m.SendErrorEmailFunc != nil {
-		return m.SendErrorEmailFunc(ctx, recipients, errors)
-	}
-	return nil
-}
-
-func (m *MockEmailClient) SendSummaryEmail(ctx context.Context, recipients []string, group *models.Group, errors []string) error {
-	if m.SendSummaryEmailFunc != nil {
-		return m.SendSummaryEmailFunc(ctx, recipients, group, errors)
-	}
-	return nil
 }

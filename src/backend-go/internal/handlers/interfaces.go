@@ -14,7 +14,7 @@ type DatabaseClient interface {
 	GetCreditCards(ctx context.Context) ([]models.CreditCard, error)
 	SaveCreditCard(ctx context.Context, card models.CreditCard) error
 	UpdateCardBalance(ctx context.Context, accountNumber int, delta decimal.Decimal) error
-	GetAllPeople(ctx context.Context) ([]models.Person, error)
+
 	SaveTransactions(ctx context.Context, transactions []models.Transaction) ([]models.Transaction, error)
 }
 
@@ -31,6 +31,4 @@ type QueueClient interface {
 
 // EmailClient defines the interface for email operations used by handlers.
 type EmailClient interface {
-	SendErrorEmail(ctx context.Context, recipients []string, errors []string) error
-	SendSummaryEmail(ctx context.Context, recipients []string, group *models.Group, errors []string) error
 }
