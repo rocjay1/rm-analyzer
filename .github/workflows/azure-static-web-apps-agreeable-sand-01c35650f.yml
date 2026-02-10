@@ -50,15 +50,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          python-version: "3.12"
+          go-version: '1.25'
+          cache-dependency-path: src-go/go.sum
 
-      - name: Install dependencies
+      - name: Build Go Backend
         run: |
-          python -m pip install --upgrade pip
-          pip install -r src/backend/requirements.txt --target="src/backend/.python_packages/lib/site-packages"
+          cd src-go
+          go build -o handler cmd/handler/main.go
+          mkdir -p ../publish
+          cp handler ../publish/
+          cp host.json ../publish/
+          cp -r HttpTrigger ../publish/
 
       - name: Log in to Azure (OIDC)
         uses: azure/login@v2
@@ -71,6 +76,4 @@ jobs:
         uses: Azure/functions-action@v1
         with:
           app-name: ${{ secrets.AZURE_FUNCTION_APP_NAME }}
-          package: 'src/backend'
-          scm-do-build-during-deployment: true
-          enable-oryx-build: true
+          package: 'publish'

@@ -7,9 +7,10 @@
 set -m
 
 # Activate virtual environment if it exists
-if [ -d ".venv" ]; then
-    echo "Activating virtual environment..."
-    source .venv/bin/activate
+# Check if Go is installed
+if ! command -v go &> /dev/null; then
+    echo "Go is not installed. Please install Go to proceed."
+    exit 1
 fi
 
 # Helper to kill processes on specific ports
@@ -43,8 +44,34 @@ echo "Starting Azurite..."
 azurite --silent --location .azurite --debug .azurite/debug.log --skipApiVersionCheck &
 
 echo "Starting Azure Functions Backend..."
-cd src/backend
+echo "Building Go backend..."
+cd src-go
+
+# Use local paths for Go build to avoid permission issues
+mkdir -p ../.gotmp/cache
+export GOTMPDIR=$(pwd)/../.gotmp
+export GOCACHE=$(pwd)/../.gotmp/cache
+export GOPATH=$(pwd)/../.gotmp
+
+go build -o handler cmd/handler/main.go
+if [ $? -ne 0 ]; then
+    echo "Go build failed."
+    exit 1
+fi
+
+# Manually export critical values for local dev to ensure Go handler sees them
+export TABLE_SERVICE_URL="http://127.0.0.1:10002/devstoreaccount1"
+export BLOB_SERVICE_URL="http://127.0.0.1:10000/devstoreaccount1"
+export QUEUE_SERVICE_URL="http://127.0.0.1:10001/devstoreaccount1"
+export SAVINGS_TABLE="savings"
+export CREDIT_CARDS_TABLE="creditcards"
+export TRANSACTIONS_TABLE="transactions"
+export PEOPLE_TABLE="people"
+export ACCOUNTS_TABLE="accounts"
+
+echo "Starting Azure Functions Backend..."
 # Start Func in background
+export FUNCTIONS_WORKER_RUNTIME=custom
 func start --port 7071 &
 FUNC_PID=$!
 
@@ -52,7 +79,7 @@ FUNC_PID=$!
 sleep 5
 
 echo "Starting Frontend Proxy..."
-cd ../frontend
+cd ../src/frontend
 # Unset potentially conflicting variables from the current environment
 unset AZURE_CLIENT_ID
 unset AZURE_CLIENT_SECRET
