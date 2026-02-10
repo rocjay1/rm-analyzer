@@ -89,10 +89,10 @@ func (m *MockBlobClient) DownloadText(ctx context.Context, containerName, blobNa
 
 // MockQueueClient is a mock implementation of QueueClient
 type MockQueueClient struct {
-	EnqueueMessageFunc func(ctx context.Context, queueName string, message interface{}) error
+	EnqueueMessageFunc func(ctx context.Context, queueName string, message any) error
 }
 
-func (m *MockQueueClient) EnqueueMessage(ctx context.Context, queueName string, message interface{}) error {
+func (m *MockQueueClient) EnqueueMessage(ctx context.Context, queueName string, message any) error {
 	if m.EnqueueMessageFunc != nil {
 		return m.EnqueueMessageFunc(ctx, queueName, message)
 	}

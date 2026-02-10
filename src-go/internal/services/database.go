@@ -182,7 +182,7 @@ func (s *DatabaseService) GetSavings(ctx context.Context, month string) (*models
 		}
 
 		for _, entity := range resp.Entities {
-			var parsed map[string]interface{}
+			var parsed map[string]any
 			if err := json.Unmarshal(entity, &parsed); err != nil {
 				continue
 			}
@@ -234,7 +234,7 @@ func (s *DatabaseService) SaveSavings(ctx context.Context, month string, data *m
 			return fmt.Errorf("failed to list existing entities: %w", err)
 		}
 		for _, entity := range resp.Entities {
-			var parsed map[string]interface{}
+			var parsed map[string]any
 			if err := json.Unmarshal(entity, &parsed); err != nil {
 				continue
 			}
@@ -251,7 +251,7 @@ func (s *DatabaseService) SaveSavings(ctx context.Context, month string, data *m
 	newItemRowKeys := make(map[string]bool)
 
 	// Upsert Summary
-	summaryEntity := map[string]interface{}{
+	summaryEntity := map[string]any{
 		"PartitionKey":    month,
 		"RowKey":          "SUMMARY",
 		"StartingBalance": data.StartingBalance.InexactFloat64(),
@@ -267,7 +267,7 @@ func (s *DatabaseService) SaveSavings(ctx context.Context, month string, data *m
 		rowKey := "ITEM_" + utils.GenerateSHA256Hash(item.Name)
 		newItemRowKeys[rowKey] = true
 
-		itemEntity := map[string]interface{}{
+		itemEntity := map[string]any{
 			"PartitionKey": month,
 			"RowKey":       rowKey,
 			"Name":         item.Name,
@@ -283,7 +283,7 @@ func (s *DatabaseService) SaveSavings(ctx context.Context, month string, data *m
 	// 3. Delete removed items
 	for rk := range existingRowKeys {
 		if !newItemRowKeys[rk] {
-			deleteEntity := map[string]interface{}{
+			deleteEntity := map[string]any{
 				"PartitionKey": month,
 				"RowKey":       rk,
 			}
@@ -337,7 +337,7 @@ func (s *DatabaseService) GetCreditCards(ctx context.Context) ([]models.CreditCa
 		}
 
 		for _, entity := range resp.Entities {
-			var parsed map[string]interface{}
+			var parsed map[string]any
 			if err := json.Unmarshal(entity, &parsed); err != nil {
 				continue
 			}
@@ -417,7 +417,7 @@ func (s *DatabaseService) GetAllPeople(ctx context.Context) ([]models.Person, er
 		}
 
 		for _, entity := range resp.Entities {
-			var parsed map[string]interface{}
+			var parsed map[string]any
 			if err := json.Unmarshal(entity, &parsed); err != nil {
 				continue
 			}
@@ -522,7 +522,7 @@ func (s *DatabaseService) SaveTransactions(ctx context.Context, transactions []m
 				return nil, fmt.Errorf("failed to list existing transactions: %w", err)
 			}
 			for _, entity := range resp.Entities {
-				var parsed map[string]interface{}
+				var parsed map[string]any
 				if err := json.Unmarshal(entity, &parsed); err == nil {
 					if rk, ok := parsed["RowKey"].(string); ok {
 						existingKeys[rk] = true
@@ -539,7 +539,7 @@ func (s *DatabaseService) SaveTransactions(ctx context.Context, transactions []m
 			if !existingKeys[item.key] {
 				newTransactions = append(newTransactions, item.t)
 
-				entity := map[string]interface{}{
+				entity := map[string]any{
 					"PartitionKey":  pk,
 					"RowKey":        item.key,
 					"Date":          item.t.Date,
@@ -590,7 +590,7 @@ func (s *DatabaseService) UpdateCardBalance(ctx context.Context, accountNumber i
 
 	// Helper to update entity
 	updateEntity := func(entity *aztables.GetEntityResponse) error {
-		var parsed map[string]interface{}
+		var parsed map[string]any
 		if err := json.Unmarshal(entity.Value, &parsed); err != nil {
 			return err
 		}
@@ -638,7 +638,7 @@ func (s *DatabaseService) UpdateCardBalance(ctx context.Context, accountNumber i
 			// But entity is just []byte.
 			// We can just manipulate it.
 			entityBytes := pageResp.Entities[0]
-			var parsed map[string]interface{}
+			var parsed map[string]any
 			if err := json.Unmarshal(entityBytes, &parsed); err != nil {
 				return err
 			}
@@ -674,7 +674,7 @@ func (s *DatabaseService) SaveCreditCard(ctx context.Context, card models.Credit
 		return err
 	}
 
-	entity := map[string]interface{}{
+	entity := map[string]any{
 		"PartitionKey":     "CREDIT_CARDS",
 		"RowKey":           card.ID,
 		"Name":             card.Name,

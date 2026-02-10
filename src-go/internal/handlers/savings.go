@@ -15,7 +15,7 @@ func (d *Dependencies) HandleSavings(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		d.saveSavings(w, r)
 	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -125,7 +126,7 @@ func (s *EmailService) SendEmail(ctx context.Context, to []string, subject, body
 		return fmt.Errorf("email request failed with status %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
-	fmt.Printf("Email sent successfully to %v\n", to)
+	log.Printf("Email sent successfully to %v", to)
 	return nil
 }
 

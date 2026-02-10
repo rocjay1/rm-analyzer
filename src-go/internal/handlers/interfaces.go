@@ -26,7 +26,7 @@ type BlobClient interface {
 
 // QueueClient defines the interface for queue operations used by handlers.
 type QueueClient interface {
-	EnqueueMessage(ctx context.Context, queueName string, message interface{}) error
+	EnqueueMessage(ctx context.Context, queueName string, message any) error
 }
 
 // EmailClient defines the interface for email operations used by handlers.

@@ -40,7 +40,7 @@ func TestHandleUpload_Success(t *testing.T) {
 	}
 
 	// Mock Queue Enqueue
-	mockQueue.EnqueueMessageFunc = func(ctx context.Context, queueName string, message interface{}) error {
+	mockQueue.EnqueueMessageFunc = func(ctx context.Context, queueName string, message any) error {
 		assert.Equal(t, "process-queue", queueName)
 		msgMap, ok := message.(map[string]string)
 		assert.True(t, ok)

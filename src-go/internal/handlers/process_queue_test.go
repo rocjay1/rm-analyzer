@@ -69,8 +69,8 @@ func TestProcessQueue_Success(t *testing.T) {
 	}
 
 	// Request Payload
-	reqPayload := map[string]interface{}{
-		"Data": map[string]interface{}{
+	reqPayload := map[string]any{
+		"Data": map[string]any{
 			"queueItem": `{"blob_name": "test-blob.csv"}`,
 		},
 	}
@@ -96,8 +96,8 @@ func TestProcessQueue_DownloadError(t *testing.T) {
 		return "", errors.New("download failed")
 	}
 
-	reqPayload := map[string]interface{}{
-		"Data": map[string]interface{}{
+	reqPayload := map[string]any{
+		"Data": map[string]any{
 			"queueItem": `{"blob_name": "test-blob.csv"}`,
 		},
 	}
@@ -138,8 +138,8 @@ func TestProcessQueue_ValidationError(t *testing.T) {
 		return nil
 	}
 
-	reqPayload := map[string]interface{}{
-		"Data": map[string]interface{}{
+	reqPayload := map[string]any{
+		"Data": map[string]any{
 			"queueItem": `{"blob_name": "test-blob.csv"}`,
 		},
 	}

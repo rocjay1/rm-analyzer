@@ -58,7 +58,7 @@ func NewQueueService() (*QueueService, error) {
 }
 
 // EnqueueMessage sends a message to the specified queue.
-func (s *QueueService) EnqueueMessage(ctx context.Context, queueName string, message interface{}) error {
+func (s *QueueService) EnqueueMessage(ctx context.Context, queueName string, message any) error {
 	queueClient := s.client.NewQueueClient(queueName)
 
 	// Create queue if not exists (optional, mostly for dev)

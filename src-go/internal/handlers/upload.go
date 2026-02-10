@@ -11,7 +11,7 @@ import (
 // HandleUpload handles CSV file uploads.
 func (d *Dependencies) HandleUpload(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 

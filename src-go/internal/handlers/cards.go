@@ -40,5 +40,5 @@ func (d *Dependencies) HandleCreditCards(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 }

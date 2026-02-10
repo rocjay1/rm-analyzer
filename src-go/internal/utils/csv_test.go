@@ -82,35 +82,6 @@ bad-date,Bad,123,10.0,Groceries,`
 	if len(errors) != 1 {
 		t.Fatalf("Expected 1 error, got %d", len(errors))
 	}
-	
-	// We expect an error for the second row (index 1 in 0-based list of data rows? or Row 3 in file?)
-	// Our implementation says "Row 3: ..."
-	// Let's check generally if error message is present
-	// Error might be on Date or something else depending on error return order, but date is first.
-	// Actually Date is just string in Struct, mapToTransaction checks empty.
-	// But "bad-date" is not empty.
-	// Wait, mapToTransaction in csv.go:
-	// dateStr := row["Date"] ... if dateStr == "" return error...
-	// It doesn't validate date format yet (per comments).
-	
-	// Ah, I need to check what I implemented.
-	// I implemented: "For simplicity, we just store it as string... Python `get_transactions` relies on `to_transaction` returning an error if date is invalid."
-	// Wait, if I didn't verify date format, then "bad-date" might be ACCEPTED as valid string?
-	
-	// Let's re-read my `mapToTransaction` implementation in previous turn.
-	// ... "Validate date format (YYYY-MM-DD) regex or parsing... We'll rely on basic non-empty check for now"
-	// So "bad-date" WILL BE ACCEPTED.
-	
-	// I should probably improve the implementation to fail on "bad-date" if I want to match Python test `test_get_transactions_with_errors`.
-	// Python test expects error on "bad-date".
-	// "Row 2" in Python test.
-	
-	// Let's fix the implementation first? Or just write a test that expects it to PASS for now and then fix implementation?
-	// The user wants "cover all functionality". 
-	// I'll update the test to expect success for now, OR better, I'll update `csv.go` to validate date immediately.
-	
-	// Let's check `Amount` parsing. "bad" amount WILL fail in `csv.go` because of `decimal.NewFromString`.
-	// So I can use "Amount: bad" to trigger error.
 }
 
 func TestParseCSV_InvalidAmount(t *testing.T) {
