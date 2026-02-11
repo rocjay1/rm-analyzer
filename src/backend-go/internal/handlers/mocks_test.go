@@ -13,6 +13,7 @@ type MockDatabaseClient struct {
 	SaveSavingsFunc       func(ctx context.Context, month string, data *models.SavingsData) error
 	GetCreditCardsFunc    func(ctx context.Context) ([]models.CreditCard, error)
 	SaveCreditCardFunc    func(ctx context.Context, card models.CreditCard) error
+	DeleteCreditCardFunc  func(ctx context.Context, id string) error
 	UpdateCardBalanceFunc func(ctx context.Context, accountNumber int, delta decimal.Decimal) error
 	SaveTransactionsFunc  func(ctx context.Context, transactions []models.Transaction) ([]models.Transaction, error)
 }
@@ -41,6 +42,13 @@ func (m *MockDatabaseClient) GetCreditCards(ctx context.Context) ([]models.Credi
 func (m *MockDatabaseClient) SaveCreditCard(ctx context.Context, card models.CreditCard) error {
 	if m.SaveCreditCardFunc != nil {
 		return m.SaveCreditCardFunc(ctx, card)
+	}
+	return nil
+}
+
+func (m *MockDatabaseClient) DeleteCreditCard(ctx context.Context, id string) error {
+	if m.DeleteCreditCardFunc != nil {
+		return m.DeleteCreditCardFunc(ctx, id)
 	}
 	return nil
 }

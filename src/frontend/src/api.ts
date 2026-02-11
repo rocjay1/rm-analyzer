@@ -21,6 +21,16 @@ export async function saveCard(cardData: CreditCardPayload): Promise<void> {
     }
 }
 
+/** Delete a credit card. */
+export async function deleteCard(id: string): Promise<void> {
+    const response = await fetch(`/api/cards?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+    });
+    if (!response.ok) {
+        throw new Error('Failed to delete card');
+    }
+}
+
 /** Upload a CSV file for processing. */
 export async function uploadFile(file: File): Promise<void> {
     const formData = new FormData();

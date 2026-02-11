@@ -158,13 +158,19 @@ h3 {
     font-size: 0.8rem;
 }
 
-.btn.btn-danger {
+.btn.danger {
     background-color: #e74c3c;
     color: white;
 }
 
-.btn.btn-danger:hover {
+.btn.danger:hover {
     background-color: #c0392b;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
 }
 
 /* Forms */

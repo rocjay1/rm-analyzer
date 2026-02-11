@@ -1,6 +1,6 @@
 import '../styles.css';
 import { renderNavbar } from './navbar';
-import { fetchCards as apiFetchCards, saveCard as apiSaveCard, uploadFile as apiUploadFile } from './api';
+import { fetchCards as apiFetchCards, saveCard as apiSaveCard, deleteCard as apiDeleteCard, uploadFile as apiUploadFile } from './api';
 import type { CreditCard, CreditCardPayload } from './types';
 
 let allCards: CreditCard[] = [];
@@ -107,6 +107,7 @@ function openCardModal(card: CreditCard | null = null): void {
     const modal = document.getElementById('cardModal') as HTMLElement;
     const form = document.getElementById('cardForm') as HTMLFormElement;
     const title = document.getElementById('modalTitle') as HTMLElement;
+    const deleteBtn = document.getElementById('deleteCardBtn') as HTMLButtonElement | null;
 
     form.reset();
 
@@ -119,11 +120,20 @@ function openCardModal(card: CreditCard | null = null): void {
         (document.getElementById('dueDay') as HTMLInputElement).value = String(card.due_day);
         (document.getElementById('currentBalance') as HTMLInputElement).value = String(card.current_balance);
         (document.getElementById('statementBalance') as HTMLInputElement).value = String(card.statement_balance);
+
+        if (deleteBtn) {
+            deleteBtn.style.display = 'inline-block';
+            deleteBtn.dataset.id = card.id;
+        }
     } else {
         title.innerText = 'Add Credit Card';
         (document.getElementById('cardId') as HTMLInputElement).value = '';
         (document.getElementById('currentBalance') as HTMLInputElement).value = '0';
         (document.getElementById('statementBalance') as HTMLInputElement).value = '0';
+
+        if (deleteBtn) {
+            deleteBtn.style.display = 'none';
+        }
     }
 
     modal.style.display = 'block';
@@ -203,6 +213,40 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Error saving card: ' + message);
         });
     });
+
+    // Delete Card Button
+    const deleteBtn = document.getElementById('deleteCardBtn');
+    console.log('deleteCardBtn element:', deleteBtn);
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', async (e: Event) => {
+            console.log('Delete button clicked');
+            // Use currentTarget to be safe
+            const targetBtn = e.currentTarget as HTMLButtonElement;
+            const id = targetBtn.dataset.id;
+            console.log('Card ID to delete:', id);
+
+            if (!id) {
+                console.error('No ID found on delete button');
+                return;
+            }
+
+            if (confirm('Are you sure you want to delete this card? This action cannot be undone.')) {
+                try {
+                    console.log('Calling API to delete card...');
+                    await apiDeleteCard(id);
+                    await fetchCards();
+                    closeModal('cardModal');
+                    console.log('Card deleted successfully');
+                } catch (err: unknown) {
+                    const message = err instanceof Error ? err.message : 'Unknown error';
+                    alert('Error deleting card: ' + message);
+                    console.error('Delete error:', err);
+                }
+            }
+        });
+    } else {
+        console.error('Delete Card Button NOT FOUND during initialization');
+    }
 
     // Statement Form Submit
     document.getElementById('statementForm')?.addEventListener('submit', (e: Event) => {

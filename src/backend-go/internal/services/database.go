@@ -217,8 +217,6 @@ func (s *DatabaseService) SaveSavings(ctx context.Context, month string, data *m
 	}
 
 	// 1. Get existing item row keys to find deletions
-	// We can reuse GetSavings or just query RowKeys
-	// querying RowKeys is more efficient
 	filter := fmt.Sprintf("PartitionKey eq '%s'", month)
 	selectFields := "RowKey"
 	pager := client.NewListEntitiesPager(&aztables.ListEntitiesOptions{
@@ -302,10 +300,6 @@ func (s *DatabaseService) SaveSavings(ctx context.Context, month string, data *m
 			end = len(batch)
 		}
 
-		// Only the first batch can be atomic with SubmitTransaction
-		// But Azure Table Storage doesn't support atomic transaction across partition keys
-		// Here everything is same PartitionKey
-		// However, the Go SDK SubmitTransaction (batch) is atomic for same partition key
 		_, err := client.SubmitTransaction(ctx, batch[i:end], nil)
 		if err != nil {
 			return fmt.Errorf("failed to submit transaction batch %d-%d: %w", i, end, err)
@@ -341,7 +335,6 @@ func (s *DatabaseService) GetCreditCards(ctx context.Context) ([]models.CreditCa
 				continue
 			}
 
-			// Helper to safely get string
 			getString := func(key string) string {
 				if v, ok := parsed[key].(string); ok {
 					return v
@@ -349,7 +342,6 @@ func (s *DatabaseService) GetCreditCards(ctx context.Context) ([]models.CreditCa
 				return ""
 			}
 
-			// Helper to safely get decimal
 			getDecimal := func(key string) decimal.Decimal {
 				if v, ok := parsed[key].(string); ok {
 					d, _ := decimal.NewFromString(v)
@@ -361,7 +353,6 @@ func (s *DatabaseService) GetCreditCards(ctx context.Context) ([]models.CreditCa
 				return decimal.Zero
 			}
 
-			// Helper to safely get int
 			getInt := func(key string) int {
 				if v, ok := parsed[key].(float64); ok {
 					return int(v)
@@ -369,7 +360,7 @@ func (s *DatabaseService) GetCreditCards(ctx context.Context) ([]models.CreditCa
 				if v, ok := parsed[key].(int32); ok {
 					return int(v)
 				}
-				if v, ok := parsed[key].(string); ok { // sometimes stored as string
+				if v, ok := parsed[key].(string); ok {
 					// parse int
 					var i int
 					fmt.Sscanf(v, "%d", &i)
@@ -397,8 +388,6 @@ func (s *DatabaseService) GetCreditCards(ctx context.Context) ([]models.CreditCa
 
 // GenerateRowKey generates a deterministic unique key for a transaction.
 func (s *DatabaseService) GenerateRowKey(t models.Transaction, index int) string {
-	// Format: Date|Name|Amount|AccountNumber|Index
-	// Amount should be string representation
 	uniqueString := fmt.Sprintf("%s|%s|%s|%d|%d", t.Date, t.Name, t.Amount.String(), t.AccountNumber, index)
 	hash := sha256.Sum256([]byte(uniqueString))
 	return hex.EncodeToString(hash[:])
@@ -412,22 +401,18 @@ func (s *DatabaseService) SaveTransactions(ctx context.Context, transactions []m
 		return []models.Transaction{}, nil
 	}
 
-	client, err := s.getClient(s.transactionsTable) // Assumed field s.transactionsTable
+	client, err := s.getClient(s.transactionsTable)
 	if err != nil {
 		return nil, err
 	}
 
-	// Group by PartitionKey (default_YYYY-MM)
+	// Group transactions by partition key (default_YYYY-MM).
 	partitions := make(map[string][]models.Transaction)
 	for _, t := range transactions {
-		// Parse date to get YYYY-MM
-		// t.Date is string YYYY-MM-DD
 		if len(t.Date) >= 7 {
 			pk := fmt.Sprintf("default_%s", t.Date[:7])
 			partitions[pk] = append(partitions[pk], t)
 		} else {
-			// Fallback or error? controller.py assumes valid date objects.
-			// basic fallback
 			partitions["default_unknown"] = append(partitions["default_unknown"], t)
 		}
 	}
@@ -444,7 +429,6 @@ func (s *DatabaseService) SaveTransactions(ctx context.Context, transactions []m
 		var transWithKeys []transWithKey
 
 		for _, t := range transList {
-			// Signature for occurrence counting
 			sig := fmt.Sprintf("%s|%s|%s|%d", t.Date, t.Name, t.Amount.String(), t.AccountNumber)
 			occurrences[sig]++
 			idx := occurrences[sig] - 1
@@ -452,8 +436,7 @@ func (s *DatabaseService) SaveTransactions(ctx context.Context, transactions []m
 			transWithKeys = append(transWithKeys, transWithKey{t, rk})
 		}
 
-		// 2. Query existing keys
-		// Select RowKey only
+		// 2. Query existing row keys for deduplication
 		filter := fmt.Sprintf("PartitionKey eq '%s'", pk)
 		selectFields := "RowKey"
 		pager := client.NewListEntitiesPager(&aztables.ListEntitiesOptions{
@@ -465,8 +448,6 @@ func (s *DatabaseService) SaveTransactions(ctx context.Context, transactions []m
 		for pager.More() {
 			resp, err := pager.NextPage(ctx)
 			if err != nil {
-				// Log warning but continue? Or fail? Python logs warning and assumes empty set (risk of dupe).
-				// We'll fail to be safe.
 				return nil, fmt.Errorf("failed to list existing transactions: %w", err)
 			}
 			for _, entity := range resp.Entities {
@@ -494,7 +475,7 @@ func (s *DatabaseService) SaveTransactions(ctx context.Context, transactions []m
 					"Description":   item.t.Name,
 					"Amount":        item.t.Amount.InexactFloat64(),
 					"AccountNumber": item.t.AccountNumber,
-					"Category":      string(item.t.Category), // Category is string alias
+					"Category":      string(item.t.Category),
 					"ImportedAt":    timestamp,
 				}
 				if item.t.Ignore != "" {
@@ -503,7 +484,7 @@ func (s *DatabaseService) SaveTransactions(ctx context.Context, transactions []m
 
 				entityJson, _ := json.Marshal(entity)
 				batch = append(batch, aztables.TransactionAction{
-					ActionType: aztables.TransactionTypeInsertReplace, // Upsert
+					ActionType: aztables.TransactionTypeInsertReplace,
 					Entity:     entityJson,
 				})
 			}
@@ -552,15 +533,7 @@ func (s *DatabaseService) UpdateCardBalance(ctx context.Context, accountNumber i
 		parsed["CurrentBalance"] = newBal.InexactFloat64()
 
 		updatedJson, _ := json.Marshal(parsed)
-		_, err := client.UpdateEntity(ctx, updatedJson, &aztables.UpdateEntityOptions{
-			IfMatch: &entity.ETag, // Optimistic concurrency
-		})
-		// If ETag mismatch, we should retry, but for simplicity we rely on single consumer for now
-		// or maybe retry logic needed.
-		// UpdateEntity signature: (ctx, entity, options) -> Response
-		// Wait, Check signature of UpdateEntity.
-		// It takes []byte.
-		_, err = client.UpdateEntity(ctx, updatedJson, nil)
+		_, err := client.UpdateEntity(ctx, updatedJson, nil)
 		return err
 	}
 
@@ -581,10 +554,6 @@ func (s *DatabaseService) UpdateCardBalance(ctx context.Context, accountNumber i
 			return err
 		}
 		if len(pageResp.Entities) > 0 {
-			// Construct pseudo GetEntityResponse to reuse logic
-			// Need ETag? Yes.
-			// But entity is just []byte.
-			// We can just manipulate it.
 			entityBytes := pageResp.Entities[0]
 			var parsed map[string]any
 			if err := json.Unmarshal(entityBytes, &parsed); err != nil {
@@ -608,10 +577,8 @@ func (s *DatabaseService) UpdateCardBalance(ctx context.Context, accountNumber i
 }
 
 // UpsertAccounts updates accounts from sync data.
+// TODO: implement account upsert logic.
 func (s *DatabaseService) UpsertAccounts(ctx context.Context, accounts []models.Account, userEmail string) error {
-	// Implementation skipped for brevity as not strictly required for ProcessQueue parity right now?
-	// Actually controller.py uses it. I should implement it if I can.
-	// But loop + upsert is easy.
 	return nil
 }
 
@@ -632,9 +599,19 @@ func (s *DatabaseService) SaveCreditCard(ctx context.Context, card models.Credit
 		"StatementBalance": card.StatementBalance.InexactFloat64(),
 		"CurrentBalance":   card.CurrentBalance.InexactFloat64(),
 	}
-	// LastReconciled handling?
 
 	entityJson, _ := json.Marshal(entity)
 	_, err = client.UpsertEntity(ctx, entityJson, nil)
+	return err
+}
+
+// DeleteCreditCard deletes a credit card by its ID (RowKey).
+func (s *DatabaseService) DeleteCreditCard(ctx context.Context, id string) error {
+	client, err := s.getClient(s.creditCardsTable)
+	if err != nil {
+		return err
+	}
+
+	_, err = client.DeleteEntity(ctx, "CREDIT_CARDS", id, nil)
 	return err
 }

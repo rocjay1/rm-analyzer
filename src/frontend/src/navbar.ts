@@ -18,7 +18,7 @@ export async function renderNavbar(): Promise<void> {
         <div style="display: flex; align-items: center; width: 100%;">
             <a href="index.html" class="nav-brand">RM Analyzer</a>
             <div class="nav-links">
-                <a href="index.html" class="nav-link ${currentPath === 'index.html' || currentPath === '' ? 'active' : ''}">Dashboard</a>
+                <a href="index.html" class="nav-link ${currentPath === 'index.html' || currentPath === '' ? 'active' : ''}">Credit Cards</a>
                 <a href="savings.html" class="nav-link ${currentPath === 'savings.html' ? 'active' : ''}">Savings Calculator</a>
             </div>
             <div id="nav-user-info" class="nav-user"></div>

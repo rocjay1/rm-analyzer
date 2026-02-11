@@ -6,7 +6,6 @@
 # ensuring they ONLY get the signal when we explicitly kill them in cleanup().
 set -m
 
-# Activate virtual environment if it exists
 # Check if Go is installed
 if ! command -v go &> /dev/null; then
     echo "Go is not installed. Please install Go to proceed."

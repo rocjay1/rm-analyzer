@@ -13,6 +13,7 @@ type DatabaseClient interface {
 	SaveSavings(ctx context.Context, month string, data *models.SavingsData) error
 	GetCreditCards(ctx context.Context) ([]models.CreditCard, error)
 	SaveCreditCard(ctx context.Context, card models.CreditCard) error
+	DeleteCreditCard(ctx context.Context, id string) error
 	UpdateCardBalance(ctx context.Context, accountNumber int, delta decimal.Decimal) error
 
 	SaveTransactions(ctx context.Context, transactions []models.Transaction) ([]models.Transaction, error)

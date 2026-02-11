@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/rocjay1/rm-analyzer/internal/models"
 )
 
@@ -35,16 +36,38 @@ func (d *Dependencies) HandleCreditCards(w http.ResponseWriter, r *http.Request)
 			return
 		}
 
-		// Ensure ID is generated if missing (though front-end handles this or DB upsert)
-		// For simplicity we trust simple upsert logic in DB service
+		// Ensure ID is generated if missing
+		if card.ID == "" {
+			card.ID = uuid.New().String()
+		}
+
 		if err := d.Database.SaveCreditCard(r.Context(), card); err != nil {
 			slog.Error("failed to save credit card", "card_name", card.Name, "account_number", card.AccountNumber, "error", err)
 			WriteError(w, http.StatusInternalServerError, "Failed to save credit card: "+err.Error())
 			return
 		}
 
-		slog.Info("successfully saved credit card", "card_name", card.Name, "account_number", card.AccountNumber)
-		WriteJSON(w, http.StatusOK, map[string]string{"status": "success"})
+		slog.Info("successfully saved credit card", "card_name", card.Name, "account_number", card.AccountNumber, "id", card.ID)
+		WriteJSON(w, http.StatusOK, card)
+		return
+	}
+
+	if r.Method == http.MethodDelete {
+		id := r.URL.Query().Get("id")
+		if id == "" {
+			WriteError(w, http.StatusBadRequest, "Missing card ID")
+			return
+		}
+
+		slog.Info("deleting credit card", "id", id)
+		if err := d.Database.DeleteCreditCard(r.Context(), id); err != nil {
+			slog.Error("failed to delete credit card", "id", id, "error", err)
+			WriteError(w, http.StatusInternalServerError, "Failed to delete credit card: "+err.Error())
+			return
+		}
+
+		slog.Info("successfully deleted credit card", "id", id)
+		WriteJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 		return
 	}
 
