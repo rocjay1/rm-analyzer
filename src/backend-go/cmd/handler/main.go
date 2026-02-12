@@ -2,12 +2,12 @@ package main
 
 import (
 	"errors"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
 
-	"github.com/rocjay1/rm-analyzer/internal/handlers"
+	"github.com/rocjay1/rm-analyzer/internal/handler"
 	"github.com/rocjay1/rm-analyzer/internal/services"
 	"github.com/shopspring/decimal"
 )
@@ -20,25 +20,28 @@ func main() {
 	// Initialize Services
 	dbService, err := services.NewDatabaseService()
 	if err != nil {
-		log.Fatalf("Failed to init DatabaseService: %v", err)
+		slog.Error("Failed to init DatabaseService", "error", err)
+		os.Exit(1)
 	}
 
 	blobService, err := services.NewBlobService()
 	if err != nil {
-		log.Fatalf("Failed to init BlobService: %v", err)
+		slog.Error("Failed to init BlobService", "error", err)
+		os.Exit(1)
 	}
 
 	queueService, err := services.NewQueueService()
 	if err != nil {
-		log.Fatalf("Failed to init QueueService: %v", err)
+		slog.Error("Failed to init QueueService", "error", err)
+		os.Exit(1)
 	}
 
 	emailService, err := services.NewEmailService(nil)
 	if err != nil {
-		log.Printf("Failed to init EmailService (continuing anyway): %v", err)
+		slog.Warn("Failed to init EmailService (continuing anyway)", "error", err)
 	}
 
-	deps := &handlers.Dependencies{
+	deps := &handler.Dependencies{
 		Database: dbService,
 		Blob:     blobService,
 		Queue:    queueService,
@@ -49,13 +52,18 @@ func main() {
 	mux := http.NewServeMux()
 
 	// API Routes
-	mux.HandleFunc("/api/savings", deps.HandleSavings)
-	mux.HandleFunc("/api/cards", deps.HandleCreditCards)
-	mux.HandleFunc("/api/upload", deps.HandleUpload)
-	mux.HandleFunc("/ProcessQueue", deps.ProcessQueue)
+	mux.HandleFunc("GET /api/savings", deps.HandleSavings)
+	mux.HandleFunc("POST /api/savings", deps.HandleSavings)
+
+	mux.HandleFunc("GET /api/cards", deps.HandleCreditCards)
+	mux.HandleFunc("POST /api/cards", deps.HandleCreditCards)
+	mux.HandleFunc("DELETE /api/cards", deps.HandleCreditCards)
+
+	mux.HandleFunc("POST /api/upload", deps.HandleUpload)
+	mux.HandleFunc("POST /ProcessQueue", deps.ProcessQueue)
 
 	// Health check (optional, good for debugging)
-	mux.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK"))
 	})
 
@@ -68,9 +76,10 @@ func main() {
 	// Wrap mux with logging middleware
 	loggedMux := loggingMiddleware(mux)
 
-	log.Printf("Starting server on port %s", port)
+	slog.Info("Starting server", "port", port)
 	if err := http.ListenAndServe(":"+port, loggedMux); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Fatalf("Server failed: %v", err)
+		slog.Error("Server failed", "error", err)
+		os.Exit(1)
 	}
 }
 
@@ -92,6 +101,6 @@ func loggingMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(rw, r)
 
 		duration := time.Since(start)
-		log.Printf("[Request] %s %s | %d | %v", r.Method, r.URL.Path, rw.status, duration)
+		slog.Info("request completed", "method", r.Method, "path", r.URL.Path, "status", rw.status, "duration", duration)
 	})
 }

@@ -8,7 +8,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azqueue"
 )
 
@@ -27,13 +26,11 @@ func NewQueueService() (*QueueService, error) {
 	slog.Info("initializing queue service", "queue_url", queueURL)
 	var client *azqueue.ServiceClient
 
-	if strings.HasPrefix(queueURL, "http") {
+	if isLocal(queueURL) {
 		// Check if running locally with Azurite (http endpoint)
 		slog.Info("using Azurite shared key credentials for queue service")
-		cred, err := azqueue.NewSharedKeyCredential(
-			"devstoreaccount1",
-			"Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
-		)
+		name, key := getAzuriteCredentials()
+		cred, err := azqueue.NewSharedKeyCredential(name, key)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create shared key credential: %w", err)
 		}
@@ -45,7 +42,7 @@ func NewQueueService() (*QueueService, error) {
 	} else {
 		// Production: Managed Identity
 		slog.Info("using default Azure credentials for queue service")
-		cred, err := azidentity.NewDefaultAzureCredential(nil)
+		cred, err := newDefaultAzureCredential()
 		if err != nil {
 			return nil, fmt.Errorf("failed to create default azure credential: %w", err)
 		}

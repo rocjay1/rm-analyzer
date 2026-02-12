@@ -1,4 +1,4 @@
-package handlers
+package handler
 
 import (
 	"bytes"
@@ -39,7 +39,7 @@ func TestHandleCreditCards_Success(t *testing.T) {
 
 func TestHandleCreditCards_MethodNotAllowed(t *testing.T) {
 	deps := &Dependencies{}
-	req := httptest.NewRequest(http.MethodDelete, "/cards", nil)
+	req := httptest.NewRequest(http.MethodPut, "/cards", nil)
 	w := httptest.NewRecorder()
 
 	deps.HandleCreditCards(w, req)

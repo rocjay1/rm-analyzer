@@ -1,4 +1,4 @@
-package handlers
+package handler
 
 import (
 	"encoding/json"
@@ -9,9 +9,10 @@ import (
 	"github.com/rocjay1/rm-analyzer/internal/models"
 )
 
-// HandleCreditCards handles GET and POST requests for credit cards.
+// HandleCreditCards handles GET, POST, and DELETE requests for credit cards.
 func (d *Dependencies) HandleCreditCards(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
+	switch r.Method {
+	case http.MethodGet:
 		slog.Info("fetching credit cards", "method", r.Method, "path", r.URL.Path)
 		cards, err := d.Database.GetCreditCards(r.Context())
 		if err != nil {
@@ -24,10 +25,8 @@ func (d *Dependencies) HandleCreditCards(w http.ResponseWriter, r *http.Request)
 			cards[i].PopulateCalculatedFields()
 		}
 		WriteJSON(w, http.StatusOK, cards)
-		return
-	}
 
-	if r.Method == http.MethodPost {
+	case http.MethodPost:
 		slog.Info("saving credit card", "method", r.Method, "path", r.URL.Path)
 		var card models.CreditCard
 		if err := json.NewDecoder(r.Body).Decode(&card); err != nil {
@@ -36,7 +35,6 @@ func (d *Dependencies) HandleCreditCards(w http.ResponseWriter, r *http.Request)
 			return
 		}
 
-		// Ensure ID is generated if missing
 		if card.ID == "" {
 			card.ID = uuid.New().String()
 		}
@@ -49,10 +47,8 @@ func (d *Dependencies) HandleCreditCards(w http.ResponseWriter, r *http.Request)
 
 		slog.Info("successfully saved credit card", "card_name", card.Name, "account_number", card.AccountNumber, "id", card.ID)
 		WriteJSON(w, http.StatusOK, card)
-		return
-	}
 
-	if r.Method == http.MethodDelete {
+	case http.MethodDelete:
 		id := r.URL.Query().Get("id")
 		if id == "" {
 			WriteError(w, http.StatusBadRequest, "Missing card ID")
@@ -68,8 +64,8 @@ func (d *Dependencies) HandleCreditCards(w http.ResponseWriter, r *http.Request)
 
 		slog.Info("successfully deleted credit card", "id", id)
 		WriteJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
-		return
-	}
 
-	WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
+	default:
+		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
+	}
 }

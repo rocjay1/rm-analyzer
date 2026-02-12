@@ -9,26 +9,22 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
-	"strings"
-
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/data/aztables"
 	"github.com/rocjay1/rm-analyzer/internal/models"
-	"github.com/rocjay1/rm-analyzer/internal/utils"
 	"github.com/shopspring/decimal"
 )
 
 // DatabaseService handles interactions with Azure Table Storage.
 type DatabaseService struct {
-	tableURL          string
+	serviceClient     *aztables.ServiceClient
 	savingsTable      string
 	creditCardsTable  string
 	transactionsTable string
 	accountsTable     string
-	credential        azcore.TokenCredential
 }
 
 // NewDatabaseService creates a new DatabaseService instance.
@@ -58,29 +54,41 @@ func NewDatabaseService() (*DatabaseService, error) {
 		accountsTable = "accounts"
 	}
 
-	var cred azcore.TokenCredential
-	var err error
+	var client *aztables.ServiceClient
 
 	// Check if running locally with Azurite (http endpoint)
-	if strings.HasPrefix(tableURL, "http") {
+	if isLocal(tableURL) {
 		slog.Info("using Azurite credentials for database service")
-		cred = nil
+		name, key := getAzuriteCredentials()
+		cred, err := aztables.NewSharedKeyCredential(name, key)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create shared key credential: %w", err)
+		}
+		var err2 error
+		client, err2 = aztables.NewServiceClientWithSharedKey(tableURL, cred, nil)
+		if err2 != nil {
+			return nil, fmt.Errorf("failed to create table service client with shared key: %w", err2)
+		}
 	} else {
 		// Production: Managed Identity
 		slog.Info("using default Azure credentials for database service")
-		cred, err = azidentity.NewDefaultAzureCredential(nil)
+		cred, err := newDefaultAzureCredential()
 		if err != nil {
 			return nil, fmt.Errorf("failed to create default azure credential: %w", err)
+		}
+		var err2 error
+		client, err2 = aztables.NewServiceClient(tableURL, cred, nil)
+		if err2 != nil {
+			return nil, fmt.Errorf("failed to create table service client: %w", err2)
 		}
 	}
 
 	svc := &DatabaseService{
-		tableURL:          tableURL,
+		serviceClient:     client,
 		savingsTable:      savingsTable,
 		creditCardsTable:  creditCardsTable,
 		transactionsTable: transactionsTable,
 		accountsTable:     accountsTable,
-		credential:        cred,
 	}
 
 	// Ensure tables exist
@@ -107,29 +115,8 @@ func (s *DatabaseService) CreateTables(ctx context.Context) error {
 		s.accountsTable,
 	}
 
-	var svcClient *aztables.ServiceClient
-	var err error
-
-	if s.credential == nil {
-		// Dev/Azurite
-		cred, err := aztables.NewSharedKeyCredential("devstoreaccount1", "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==")
-		if err != nil {
-			return err
-		}
-		svcClient, err = aztables.NewServiceClientWithSharedKey(s.tableURL, cred, nil)
-		if err != nil {
-			return err
-		}
-	} else {
-		// Prod
-		svcClient, err = aztables.NewServiceClient(s.tableURL, s.credential, nil)
-		if err != nil {
-			return err
-		}
-	}
-
 	for _, tableName := range tables {
-		_, err = svcClient.CreateTable(ctx, tableName, nil)
+		_, err := s.serviceClient.CreateTable(ctx, tableName, nil)
 		if err != nil {
 			// Ignore error if table already exists
 			var azErr *azcore.ResponseError
@@ -142,26 +129,14 @@ func (s *DatabaseService) CreateTables(ctx context.Context) error {
 	return nil
 }
 
-func (s *DatabaseService) getClient(tableName string) (*aztables.Client, error) {
-	if s.credential == nil {
-		// Dev/Azurite: Use Shared Key
-		cred, err := aztables.NewSharedKeyCredential("devstoreaccount1", "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==")
-		if err != nil {
-			return nil, fmt.Errorf("failed to create shared key credential: %w", err)
-		}
-		return aztables.NewClientWithSharedKey(s.tableURL+"/"+tableName, cred, nil)
-	}
-
-	// Prod: Use TokenCredential
-	return aztables.NewClient(s.tableURL+"/"+tableName, s.credential, nil)
+// getClient returns a client for the specified table.
+func (s *DatabaseService) getClient(tableName string) *aztables.Client {
+	return s.serviceClient.NewClient(tableName)
 }
 
 // GetSavings retrieves savings data for a specific month.
 func (s *DatabaseService) GetSavings(ctx context.Context, month string) (*models.SavingsData, error) {
-	client, err := s.getClient(s.savingsTable)
-	if err != nil {
-		return nil, err
-	}
+	client := s.getClient(s.savingsTable)
 
 	// Filter by PartitionKey
 	filter := fmt.Sprintf("PartitionKey eq '%s'", month)
@@ -211,10 +186,7 @@ func (s *DatabaseService) GetSavings(ctx context.Context, month string) (*models
 
 // SaveSavings saves savings data for a month, handing deletions and upserts.
 func (s *DatabaseService) SaveSavings(ctx context.Context, month string, data *models.SavingsData) error {
-	client, err := s.getClient(s.savingsTable)
-	if err != nil {
-		return err
-	}
+	client := s.getClient(s.savingsTable)
 
 	// 1. Get existing item row keys to find deletions
 	filter := fmt.Sprintf("PartitionKey eq '%s'", month)
@@ -261,7 +233,8 @@ func (s *DatabaseService) SaveSavings(ctx context.Context, month string, data *m
 
 	// Upsert Items
 	for _, item := range data.Items {
-		rowKey := "ITEM_" + utils.GenerateSHA256Hash(item.Name)
+		h := sha256.Sum256([]byte(item.Name))
+		rowKey := "ITEM_" + hex.EncodeToString(h[:])
 		newItemRowKeys[rowKey] = true
 
 		itemEntity := map[string]any{
@@ -311,10 +284,7 @@ func (s *DatabaseService) SaveSavings(ctx context.Context, month string, data *m
 
 // GetCreditCards retrieves all credit cards.
 func (s *DatabaseService) GetCreditCards(ctx context.Context) ([]models.CreditCard, error) {
-	client, err := s.getClient(s.creditCardsTable)
-	if err != nil {
-		return nil, err
-	}
+	client := s.getClient(s.creditCardsTable)
 
 	filter := "PartitionKey eq 'CREDIT_CARDS'"
 	pager := client.NewListEntitiesPager(&aztables.ListEntitiesOptions{
@@ -401,10 +371,7 @@ func (s *DatabaseService) SaveTransactions(ctx context.Context, transactions []m
 		return []models.Transaction{}, nil
 	}
 
-	client, err := s.getClient(s.transactionsTable)
-	if err != nil {
-		return nil, err
-	}
+	client := s.getClient(s.transactionsTable)
 
 	// Group transactions by partition key (default_YYYY-MM).
 	partitions := make(map[string][]models.Transaction)
@@ -509,10 +476,7 @@ func (s *DatabaseService) SaveTransactions(ctx context.Context, transactions []m
 
 // UpdateCardBalance updates the current balance of a credit card.
 func (s *DatabaseService) UpdateCardBalance(ctx context.Context, accountNumber int, delta decimal.Decimal) error {
-	client, err := s.getClient(s.creditCardsTable)
-	if err != nil {
-		return err
-	}
+	client := s.getClient(s.creditCardsTable)
 
 	// Try RowKey = AccountNumber first
 	rowKey := fmt.Sprintf("%d", accountNumber)
@@ -584,10 +548,7 @@ func (s *DatabaseService) UpsertAccounts(ctx context.Context, accounts []models.
 
 // SaveCreditCard upserts a credit card config.
 func (s *DatabaseService) SaveCreditCard(ctx context.Context, card models.CreditCard) error {
-	client, err := s.getClient(s.creditCardsTable)
-	if err != nil {
-		return err
-	}
+	client := s.getClient(s.creditCardsTable)
 
 	entity := map[string]any{
 		"PartitionKey":     "CREDIT_CARDS",
@@ -601,17 +562,14 @@ func (s *DatabaseService) SaveCreditCard(ctx context.Context, card models.Credit
 	}
 
 	entityJson, _ := json.Marshal(entity)
-	_, err = client.UpsertEntity(ctx, entityJson, nil)
+	_, err := client.UpsertEntity(ctx, entityJson, nil)
 	return err
 }
 
 // DeleteCreditCard deletes a credit card by its ID (RowKey).
 func (s *DatabaseService) DeleteCreditCard(ctx context.Context, id string) error {
-	client, err := s.getClient(s.creditCardsTable)
-	if err != nil {
-		return err
-	}
+	client := s.getClient(s.creditCardsTable)
 
-	_, err = client.DeleteEntity(ctx, "CREDIT_CARDS", id, nil)
+	_, err := client.DeleteEntity(ctx, "CREDIT_CARDS", id, nil)
 	return err
 }

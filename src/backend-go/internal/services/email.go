@@ -13,14 +13,14 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 )
 
 // EmailService handles sending emails via Azure Communication Services REST API.
 type EmailService struct {
-	endpoint string
-	sender   string
-	cred     azcore.TokenCredential
+	endpoint   string
+	sender     string
+	cred       azcore.TokenCredential
+	httpClient *http.Client
 }
 
 // NewEmailService creates a new EmailService instance.
@@ -38,16 +38,17 @@ func NewEmailService(cred azcore.TokenCredential) (*EmailService, error) {
 
 	if cred == nil {
 		var err error
-		cred, err = azidentity.NewDefaultAzureCredential(nil)
+		cred, err = newDefaultAzureCredential()
 		if err != nil {
 			return nil, fmt.Errorf("failed to create default azure credential: %w", err)
 		}
 	}
 
 	return &EmailService{
-		endpoint: endpoint,
-		sender:   sender,
-		cred:     cred,
+		endpoint:   endpoint,
+		sender:     sender,
+		cred:       cred,
+		httpClient: &http.Client{Timeout: 30 * time.Second},
 	}, nil
 }
 
@@ -113,8 +114,7 @@ func (s *EmailService) SendEmail(ctx context.Context, to []string, subject, body
 	req.Header.Set("Authorization", "Bearer "+token.Token)
 
 	// Send request
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to send email request: %w", err)
 	}

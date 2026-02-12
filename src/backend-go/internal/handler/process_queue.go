@@ -1,4 +1,4 @@
-package handlers
+package handler
 
 import (
 	"encoding/json"
@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/rocjay1/rm-analyzer/internal/csvparse"
 	"github.com/rocjay1/rm-analyzer/internal/models"
-	"github.com/rocjay1/rm-analyzer/internal/utils"
 	"github.com/shopspring/decimal"
 )
 
@@ -73,7 +73,7 @@ func (d *Dependencies) ProcessQueue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	transactions, errors := utils.ParseCSV(csvContent)
+	transactions, errors := csvparse.ParseCSV(csvContent)
 	slog.Info("parsed CSV content", "blob_name", blobName, "transactions_count", len(transactions), "errors_count", len(errors))
 
 	if len(errors) > 0 && len(transactions) == 0 {
@@ -132,9 +132,6 @@ func (d *Dependencies) ProcessQueue(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-
-	slog.Info("queue processing complete", "blob_name", blobName, "new_transactions_count", len(newTransactions))
-	w.WriteHeader(http.StatusOK)
 
 	slog.Info("queue processing complete", "blob_name", blobName, "new_transactions_count", len(newTransactions))
 	w.WriteHeader(http.StatusOK)

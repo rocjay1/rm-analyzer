@@ -8,7 +8,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 )
 
@@ -29,12 +28,10 @@ func NewBlobService() (*BlobService, error) {
 	var client *azblob.Client
 
 	// Check if running locally with Azurite (http endpoint)
-	if strings.HasPrefix(blobURL, "http") {
+	if isLocal(blobURL) {
 		slog.Info("using Azurite shared key credentials for blob service")
-		cred, err := azblob.NewSharedKeyCredential(
-			"devstoreaccount1",
-			"Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
-		)
+		name, key := getAzuriteCredentials()
+		cred, err := azblob.NewSharedKeyCredential(name, key)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create shared key credential: %w", err)
 		}
@@ -45,8 +42,7 @@ func NewBlobService() (*BlobService, error) {
 		}
 	} else {
 		// Production: Managed Identity
-		slog.Info("using default Azure credentials for blob service")
-		cred, err := azidentity.NewDefaultAzureCredential(nil)
+		cred, err := newDefaultAzureCredential()
 		if err != nil {
 			return nil, fmt.Errorf("failed to create default azure credential: %w", err)
 		}
