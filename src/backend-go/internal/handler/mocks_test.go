@@ -101,4 +101,20 @@ func (m *MockQueueClient) EnqueueMessage(ctx context.Context, queueName string, 
 
 // MockEmailClient is a mock implementation of EmailClient
 type MockEmailClient struct {
+	SendEmailFunc      func(ctx context.Context, to []string, subject, body string) error
+	SendErrorEmailFunc func(ctx context.Context, recipients []string, errors []string) error
+}
+
+func (m *MockEmailClient) SendEmail(ctx context.Context, to []string, subject, body string) error {
+	if m.SendEmailFunc != nil {
+		return m.SendEmailFunc(ctx, to, subject, body)
+	}
+	return nil
+}
+
+func (m *MockEmailClient) SendErrorEmail(ctx context.Context, recipients []string, errors []string) error {
+	if m.SendErrorEmailFunc != nil {
+		return m.SendErrorEmailFunc(ctx, recipients, errors)
+	}
+	return nil
 }

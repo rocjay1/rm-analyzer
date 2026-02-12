@@ -61,6 +61,7 @@ func main() {
 
 	mux.HandleFunc("POST /api/upload", deps.HandleUpload)
 	mux.HandleFunc("POST /ProcessQueue", deps.ProcessQueue)
+	mux.HandleFunc("POST /NightlyTrigger", deps.HandleNightlyTrigger)
 
 	// Health check (optional, good for debugging)
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {

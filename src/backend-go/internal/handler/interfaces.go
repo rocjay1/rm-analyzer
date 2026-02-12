@@ -32,4 +32,6 @@ type QueueClient interface {
 
 // EmailClient defines the interface for email operations used by handlers.
 type EmailClient interface {
+	SendEmail(ctx context.Context, to []string, subject, body string) error
+	SendErrorEmail(ctx context.Context, recipients []string, errors []string) error
 }
