@@ -12,6 +12,24 @@ export interface CreditCard {
     target_payment: number;
 }
 
+/** Represents spending categories for transactions. Matches Go Category model. */
+export enum Category {
+    Dining = "Dining & Drinks",
+    Groceries = "Groceries",
+    Pets = "Pets",
+    Bills = "Bills & Utilities",
+    Purchases = "Shared Purchases",
+    Subscriptions = "Shared Subscriptions",
+    Travel = "Travel & Vacation",
+    Payment = "Credit Card Payment",
+    Donations = "Charitable Donations",
+    Loans = "Loan Payment",
+    Miscellaneous = "Miscellaneous",
+    Rocco = "Rocco’s Bucket",
+    Tori = "Tori's Bucket",
+    Other = "Other"
+}
+
 /** Payload for creating/updating a credit card. */
 export interface CreditCardPayload {
     id?: string;
