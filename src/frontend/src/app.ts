@@ -216,36 +216,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Delete Card Button
     const deleteBtn = document.getElementById('deleteCardBtn');
-    console.log('deleteCardBtn element:', deleteBtn);
     if (deleteBtn) {
         deleteBtn.addEventListener('click', async (e: Event) => {
-            console.log('Delete button clicked');
-            // Use currentTarget to be safe
             const targetBtn = e.currentTarget as HTMLButtonElement;
             const id = targetBtn.dataset.id;
-            console.log('Card ID to delete:', id);
 
             if (!id) {
-                console.error('No ID found on delete button');
                 return;
             }
 
             if (confirm('Are you sure you want to delete this card? This action cannot be undone.')) {
                 try {
-                    console.log('Calling API to delete card...');
                     await apiDeleteCard(id);
                     await fetchCards();
                     closeModal('cardModal');
-                    console.log('Card deleted successfully');
                 } catch (err: unknown) {
                     const message = err instanceof Error ? err.message : 'Unknown error';
                     alert('Error deleting card: ' + message);
-                    console.error('Delete error:', err);
                 }
             }
         });
-    } else {
-        console.error('Delete Card Button NOT FOUND during initialization');
     }
 
     // Statement Form Submit
@@ -264,13 +254,17 @@ async function handleStatementSubmit(): Promise<void> {
         const card = allCards.find((c) => c.id === cardId);
 
         if (card && card.statement_balance !== newStmt) {
-            const updatedCard = { ...card, statement_balance: newStmt };
             try {
-                await fetch('/api/cards', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(updatedCard),
-                });
+                const payload: CreditCardPayload = {
+                    id: card.id,
+                    name: card.name,
+                    account_number: card.account_number,
+                    credit_limit: card.credit_limit,
+                    due_day: card.due_day,
+                    current_balance: card.current_balance,
+                    statement_balance: newStmt,
+                };
+                await apiSaveCard(payload);
             } catch (err) {
                 console.error(`Failed to update ${card.name}`, err);
             }
