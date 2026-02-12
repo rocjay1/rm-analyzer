@@ -21,6 +21,7 @@ type invokeRequest struct {
 
 // ProcessQueue handles the queue trigger for processing uploaded CSVs.
 func (d *Dependencies) ProcessQueue(w http.ResponseWriter, r *http.Request) {
+	slog.Info("PROCESS QUEUE HANDLER INVOKED", "method", r.Method, "path", r.URL.Path)
 	var invokeReq invokeRequest
 	bodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -28,6 +29,8 @@ func (d *Dependencies) ProcessQueue(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, http.StatusBadRequest, "Failed to read request body")
 		return
 	}
+
+	slog.Info("RAW PROCESS QUEUE BODY", "body", string(bodyBytes))
 
 	if err := json.Unmarshal(bodyBytes, &invokeReq); err != nil {
 		slog.Error("failed to unmarshal queue request", "error", err)
@@ -44,29 +47,59 @@ func (d *Dependencies) ProcessQueue(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	queueItemStr, ok := queueItemVal.(string)
-	if !ok {
-		WriteError(w, http.StatusBadRequest, "queueItem is not a string")
+	slog.Info("RAW QUEUE ITEM RECEIVED", "value", queueItemVal, "type", fmt.Sprintf("%T", queueItemVal))
+
+	// queueItemVal is interface{}
+	var blobName string
+
+	switch v := queueItemVal.(type) {
+	case string:
+		// Attempt to unmarshal as map. If it's a quoted JSON string, this might fail or return just the string.
+		var queueData map[string]interface{}
+		if err := json.Unmarshal([]byte(v), &queueData); err != nil {
+			// It might be a double-encoded string. Try unmarshaling into a string first.
+			var innerStr string
+			if err2 := json.Unmarshal([]byte(v), &innerStr); err2 == nil {
+				// Now try unmarshaling the inner string into a map
+				if err3 := json.Unmarshal([]byte(innerStr), &queueData); err3 == nil {
+					slog.Info("successfully unmarshaled double-encoded queueItem")
+				} else {
+					slog.Error("failed to unmarshal inner queueItem string", "error", err3, "inner_value", innerStr)
+					WriteError(w, http.StatusBadRequest, "Invalid inner queueItem JSON")
+					return
+				}
+			} else {
+				slog.Error("failed to unmarshal queueItem as string or map", "error", err, "value", v)
+				WriteError(w, http.StatusBadRequest, "Invalid queueItem format")
+				return
+			}
+		}
+		if name, ok := queueData["blobName"].(string); ok {
+			blobName = name
+		} else if name, ok := queueData["blob_name"].(string); ok {
+			blobName = name
+		}
+	case map[string]interface{}:
+		if name, ok := v["blobName"].(string); ok {
+			blobName = name
+		} else if name, ok := v["blob_name"].(string); ok {
+			blobName = name
+		}
+	default:
+		slog.Error("unexpected type for queueItem", "type", fmt.Sprintf("%T", queueItemVal))
+		WriteError(w, http.StatusBadRequest, fmt.Sprintf("queueItem is unexpected type: %T", queueItemVal))
 		return
 	}
 
-	var queueData map[string]string
-	if err := json.Unmarshal([]byte(queueItemStr), &queueData); err != nil {
-		slog.Error("failed to unmarshal queueItem", "error", err)
-		WriteError(w, http.StatusBadRequest, fmt.Sprintf("Invalid queueItem JSON: %v", err))
-		return
-	}
-
-	blobName := queueData["blob_name"]
 	if blobName == "" {
-		slog.Warn("queue message missing blob_name", "queue_data", queueData)
-		WriteError(w, http.StatusBadRequest, "Missing blob_name")
+		slog.Warn("queue message missing blobName or blob_name", "queue_item", queueItemVal)
+		WriteError(w, http.StatusBadRequest, "Missing blobName in queue message")
 		return
 	}
 
-	slog.Info("processing queue item", "blob_name", blobName, "container", "uploads")
+	slog.Info("processing queue item", "blob_name", blobName, "container", "rm-analyzer-data")
 
-	csvContent, err := d.Blob.DownloadText(r.Context(), "uploads", blobName)
+	csvContent, err := d.Blob.DownloadText(r.Context(), "rm-analyzer-data", blobName)
 	if err != nil {
 		slog.Error("failed to download CSV from blob", "blob_name", blobName, "container", "uploads", "error", err)
 		WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to download CSV: %v", err))
@@ -102,6 +135,8 @@ func (d *Dependencies) ProcessQueue(w http.ResponseWriter, r *http.Request) {
 			}
 
 			cardUpdates := make(map[int]decimal.Decimal)
+			cardLastReconciled := make(map[int]string)
+
 			for _, t := range newTransactions {
 				if card, exists := cardMap[t.AccountNumber]; exists {
 					// Skip transactions that predate the last reconciled balance.
@@ -121,13 +156,19 @@ func (d *Dependencies) ProcessQueue(w http.ResponseWriter, r *http.Request) {
 					cardUpdates[t.AccountNumber] = decimal.Zero
 				}
 				cardUpdates[t.AccountNumber] = cardUpdates[t.AccountNumber].Add(t.Amount)
+
+				// Track the latest transaction date for reconciliation
+				if currentLast, exists := cardLastReconciled[t.AccountNumber]; !exists || t.Date > currentLast {
+					cardLastReconciled[t.AccountNumber] = t.Date
+				}
 			}
 
 			for accNum, delta := range cardUpdates {
-				if err := d.Database.UpdateCardBalance(r.Context(), accNum, delta); err != nil {
+				lastReconciled := cardLastReconciled[accNum]
+				if err := d.Database.UpdateCardBalance(r.Context(), accNum, delta, lastReconciled); err != nil {
 					slog.Error("failed to update card balance", "account_number", accNum, "delta", delta.String(), "error", err)
 				} else {
-					slog.Info("updated card balance", "account_number", accNum, "delta", delta.String())
+					slog.Info("updated card balance", "account_number", accNum, "delta", delta.String(), "last_reconciled", lastReconciled)
 				}
 			}
 		}

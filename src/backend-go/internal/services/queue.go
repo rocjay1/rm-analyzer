@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -75,12 +76,15 @@ func (s *QueueService) EnqueueMessage(ctx context.Context, queueName string, mes
 		return fmt.Errorf("failed to marshal message: %w", err)
 	}
 
-	_, err = queueClient.EnqueueMessage(ctx, string(msgBytes), nil)
+	// Base64 encode the message for Azure Functions Host (it default-expects base64)
+	encodedMsg := base64.StdEncoding.EncodeToString(msgBytes)
+
+	_, err = queueClient.EnqueueMessage(ctx, encodedMsg, nil)
 	if err != nil {
 		slog.Error("failed to enqueue message", "queue", queueName, "error", err)
 		return fmt.Errorf("failed to enqueue message to %s: %w", queueName, err)
 	}
 
-	slog.Info("successfully enqueued message", "queue", queueName)
+	slog.Info("successfully enqueued message (base64 encoded)", "queue", queueName)
 	return nil
 }

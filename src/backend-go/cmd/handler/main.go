@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/rocjay1/rm-analyzer/internal/handler"
@@ -60,8 +63,29 @@ func main() {
 	mux.HandleFunc("DELETE /api/cards", deps.HandleCreditCards)
 
 	mux.HandleFunc("POST /api/upload", deps.HandleUpload)
-	mux.HandleFunc("POST /ProcessQueue", deps.ProcessQueue)
-	mux.HandleFunc("POST /NightlyTrigger", deps.HandleNightlyTrigger)
+
+	// Adapter for HTTP Trigger (since enableForwardingHttpRequest is false)
+	mux.HandleFunc("/HttpTrigger", deps.HandleHttpTrigger(mux))
+
+	// Use simpler path matching for ProcessQueue to avoid method mismatch issues
+	mux.HandleFunc("/ProcessQueue", deps.ProcessQueue)
+
+	mux.HandleFunc("/NightlyTrigger", deps.HandleNightlyTrigger)
+
+	// Catch-all handler for unmatched requests to debug what the Host is sending
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		headers := make(map[string]string)
+		for k, v := range r.Header {
+			headers[k] = strings.Join(v, ", ")
+		}
+		slog.Warn("UNMATCHED REQUEST",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"headers", headers,
+			"content_length", r.ContentLength,
+		)
+		http.NotFound(w, r)
+	})
 
 	// Health check (optional, good for debugging)
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
@@ -97,6 +121,25 @@ func (rw *responseWriter) WriteHeader(code int) {
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
+
+		// Read body for logging (and restore it)
+		var bodyBytes []byte
+		if r.Body != nil {
+			bodyBytes, _ = io.ReadAll(r.Body)
+			r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+		}
+
+		// Log detailed request info immediately
+		slog.Info("INCOMING REQUEST DETAILED",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"remote_addr", r.RemoteAddr,
+			"user_agent", r.UserAgent(),
+			"content_type", r.Header.Get("Content-Type"),
+			"content_length", r.ContentLength,
+			"body_preview", string(bodyBytes),
+		)
+
 		rw := &responseWriter{ResponseWriter: w, status: http.StatusOK}
 
 		next.ServeHTTP(rw, r)

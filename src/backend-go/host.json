@@ -12,12 +12,20 @@
         "id": "Microsoft.Azure.Functions.ExtensionBundle",
         "version": "[4.*, 5.0.0)"
     },
+    "extensions": {
+        "queues": {
+            "batchSize": 1,
+            "newBatchThreshold": 0,
+            "visibilityTimeout": "00:01:00",
+            "maxDequeueCount": 5
+        }
+    },
     "customHandler": {
         "description": {
-            "defaultExecutablePath": "handler",
+            "defaultExecutablePath": "handler_exec",
             "workingDirectory": "",
             "arguments": []
         },
-        "enableForwardingHttpRequest": true
+        "enableForwardingHttpRequest": false
     }
 }
