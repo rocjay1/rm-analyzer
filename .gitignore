@@ -22,7 +22,6 @@ local.settings.json
 .azurite/
 
 # VS Code
-.vscode/
 
 # Mac
 .DS_Store
